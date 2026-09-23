@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Welcome back · ParkEase</title>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="card">
+    <div class="logo">P</div>
+    <h1>Welcome back</h1>
+    <p class="subtitle">Access your ParkEase account</p>
+
+    <div id="statusBanner" class="status-banner"></div>
+
+    <form id="loginForm" novalidate>
+      <div class="field">
+        <label for="email">Email address</label>
+        <div class="input-wrap has-icon">
+          <span class="input-icon">✉</span>
+          <input type="email" id="email" name="email" placeholder="alex@example.com" autocomplete="email" required />
+        </div>
+        <p class="error-text" data-error-for="email"></p>
+      </div>
+
+      <div class="field">
+        <div class="label-row">
+          <label for="password" style="margin-bottom:0;">Password</label>
+          <a href="forgot-password.html">Forgot password?</a>
+        </div>
+        <div class="input-wrap has-icon has-toggle">
+          <span class="input-icon">🔒</span>
+          <input type="password" id="password" name="password" placeholder="••••••••" autocomplete="current-password" required />
+          <button type="button" class="toggle-visibility" data-toggle-for="password" aria-label="Show password">👁</button>
+        </div>
+        <p class="error-text" data-error-for="password"></p>
+      </div>
+
+      <div class="checkbox-row">
+        <input type="checkbox" id="keepLoggedIn" name="keepLoggedIn" />
+        <label for="keepLoggedIn" style="margin:0; font-weight:400;">Keep me logged in</label>
+      </div>
+
+      <button type="submit" class="btn-primary" id="submitBtn">Log in</button>
+    </form>
+
+    <div class="divider">OR CONTINUE WITH</div>
+
+    <div class="oauth-row">
+      <button type="button" class="btn-oauth" id="googleLogin">G Google</button>
+      <button type="button" class="btn-oauth" id="appleLogin"> Apple</button>
+    </div>
+
+    <p class="form-footer">
+      Don't have an account?
+      <a href="signup.html">Sign up</a>
+    </p>
+  </div>
+
+  <p class="page-footer">ParkEase Parking Management System · 2026</p>
+
+  <script src="app-config.js"></script>
+  <script src="login.js"></script>
+</body>
+</html>

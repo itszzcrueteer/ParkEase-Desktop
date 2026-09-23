@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ParkEase — Parking made painless</title>
+<style>
+  :root{
+    --text:#111; --muted:#6b6b6b; --faint:#9a9a9a; --border:#e6e6e6; --bg:#fff; --bg-soft:#f7f7f7;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{margin:0;color:var(--text);background:var(--bg);}
+  a{color:inherit;text-decoration:none;}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 32px;}
+
+  /* Nav */
+  header.site{position:sticky;top:0;background:#fff;border-bottom:1px solid var(--border);z-index:20;}
+  .navbar{display:flex;align-items:center;justify-content:space-between;padding:18px 32px;max-width:1180px;margin:0 auto;}
+  .brand{font-weight:700;font-size:18px;}
+  .navlinks{display:flex;gap:30px;font-size:14.5px;font-weight:500;}
+  .navlinks a:hover{color:var(--muted);}
+  .navcta{display:flex;align-items:center;gap:18px;}
+  .btn-black{background:var(--text);color:#fff;border:none;padding:10px 18px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;}
+  .btn-black:hover{opacity:.88;}
+  .btn-outline{background:#fff;border:1px solid var(--border);padding:10px 18px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;}
+  .btn-outline:hover{background:#f5f5f5;}
+  .navtoggle{display:none;background:none;border:none;font-size:22px;cursor:pointer;}
+
+  /* Hero */
+  .hero{display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:center;padding:90px 32px;max-width:1180px;margin:0 auto;}
+  .hero h1{font-size:52px;line-height:1.08;margin:0 0 20px;font-weight:800;letter-spacing:-0.02em;}
+  .hero p{font-size:16px;color:var(--muted);max-width:420px;margin:0 0 28px;}
+  .hero-cta{display:flex;align-items:center;gap:22px;margin-bottom:18px;}
+  .link-underline{font-weight:600;font-size:14.5px;border-bottom:1.5px solid var(--text);padding-bottom:2px;}
+  .trust{display:flex;align-items:center;gap:8px;font-size:13.5px;color:var(--muted);}
+
+  .hero-art{background:#232323;border-radius:20px;padding:40px;aspect-ratio:1/0.85;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);gap:14px;place-items:center;}
+  .car-spot{width:100%;height:100%;border:1.5px solid rgba(255,255,255,.25);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:26px;}
+  .car-spot.empty{border-style:dashed;}
+  .car-spot.pulse{border-color:#fff;animation:pulse 2s infinite;}
+  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.4;}}
+
+  /* Sections */
+  .section{padding:90px 32px;}
+  .section.soft{background:var(--bg-soft);}
+  .section-head{text-align:center;max-width:600px;margin:0 auto 50px;}
+  .section-head h2{font-size:32px;margin:0 0 12px;font-weight:800;letter-spacing:-0.01em;}
+  .section-head p{color:var(--muted);font-size:15px;margin:0;}
+
+  .feature-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;max-width:1180px;margin:0 auto;}
+  .feature-card{background:#fff;border:1px solid var(--border);border-radius:14px;padding:28px;}
+  .feature-ic{width:36px;height:36px;border-radius:9px;background:var(--bg-soft);display:flex;align-items:center;justify-content:center;font-size:16px;margin-bottom:18px;}
+  .feature-card h3{font-size:16px;margin:0 0 8px;}
+  .feature-card p{font-size:13.5px;color:var(--muted);margin:0;line-height:1.5;}
+
+  .steps{display:flex;justify-content:space-between;max-width:1000px;margin:0 auto;gap:20px;}
+  .step{flex:1;text-align:center;position:relative;}
+  .step-num{width:44px;height:44px;border-radius:50%;background:var(--text);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;margin:0 auto 16px;}
+  .step h4{margin:0 0 8px;font-size:16px;}
+  .step p{font-size:13.5px;color:var(--muted);margin:0;max-width:230px;margin:0 auto;}
+  .step-line{position:absolute;top:22px;left:calc(50% + 40px);right:calc(-50% + 40px);height:1px;background:var(--border);}
+  .step:last-child .step-line{display:none;}
+
+  .app-promo{display:grid;grid-template-columns:0.8fr 1fr;gap:70px;align-items:center;max-width:1180px;margin:0 auto;padding:0 32px;}
+  .phone-mock{background:#fff;border-radius:34px;box-shadow:0 20px 60px rgba(0,0,0,.12);padding:16px;max-width:280px;margin:0 auto;}
+  .phone-screen{background:#000;border-radius:22px;padding:14px;}
+  .phone-notch{width:36px;height:6px;background:#333;border-radius:4px;margin:0 auto 12px;}
+  .phone-map{background:#eee;border-radius:14px;height:150px;margin-bottom:12px;background-image:radial-gradient(circle,#ccc 1px,transparent 1px);background-size:12px 12px;position:relative;}
+  .phone-map .dot{position:absolute;top:50%;left:50%;width:10px;height:10px;border-radius:50%;background:#111;transform:translate(-50%,-50%);}
+  .phone-bar{height:36px;background:#f2f2f2;border-radius:10px;margin-bottom:8px;}
+  .phone-bar.dark{background:#111;}
+  .app-promo h3{font-size:26px;margin:0 0 14px;}
+  .app-promo p{color:var(--muted);font-size:15px;margin:0 0 26px;max-width:440px;}
+  .store-row{display:flex;gap:12px;}
+  .store-btn{display:flex;align-items:center;gap:8px;background:var(--text);color:#fff;padding:10px 18px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;border:none;}
+
+  footer.site{border-top:1px solid var(--border);padding:36px 32px;}
+  .footer-row{display:flex;justify-content:space-between;align-items:center;max-width:1180px;margin:0 auto;flex-wrap:wrap;gap:16px;}
+  .footer-links{display:flex;gap:22px;font-size:13.5px;color:var(--muted);}
+  .footer-social{display:flex;gap:14px;font-size:15px;color:var(--muted);}
+  .footer-brand b{display:block;}
+  .footer-brand span{font-size:12.5px;color:var(--faint);}
+
+  /* Get Started modal (lightweight signup teaser) */
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);display:none;align-items:center;justify-content:center;z-index:60;}
+  .modal-overlay.show{display:flex;}
+  .modal{background:#fff;border-radius:14px;padding:26px;max-width:380px;width:100%;text-align:center;}
+  .modal h3{margin:0 0 8px;}
+  .modal p{color:var(--muted);font-size:13.5px;margin:0 0 18px;}
+  .modal .row{display:flex;gap:10px;}
+  .modal .row button{flex:1;padding:10px;border-radius:8px;font-weight:600;font-size:13.5px;cursor:pointer;}
+  .modal .row .primary{background:var(--text);color:#fff;border:none;}
+  .modal .row .secondary{background:#fff;border:1px solid var(--border);}
+
+  @media(max-width:860px){
+    .navlinks{display:none;}
+    .hero{grid-template-columns:1fr;padding:60px 22px;}
+    .hero h1{font-size:38px;}
+    .feature-grid{grid-template-columns:1fr;}
+    .steps{flex-direction:column;gap:34px;}
+    .step-line{display:none;}
+    .app-promo{grid-template-columns:1fr;text-align:center;}
+    .section{padding:60px 22px;}
+  }
+</style>
+</head>
+<body>
+
+<header class="site">
+  <div class="navbar">
+    <div class="brand">ParkEase</div>
+    <nav class="navlinks">
+      <a href="#features">Features</a>
+      <a href="#pricing">Pricing</a>
+      <a href="#locations">Locations</a>
+      <a href="#support">Support</a>
+    </nav>
+    <div class="navcta">
+      <a href="login.html" class="btn-outline">Log in</a>
+      <button class="btn-black" onclick="openModal('getStartedModal')">Get Started</button>
+    </div>
+  </div>
+</header>
+
+<section class="hero">
+  <div>
+    <h1>Parking made<br>painless.</h1>
+    <p>Find, reserve, and pay for parking in seconds. ParkEase connects you to thousands of spots across the city in real time.</p>
+    <div class="hero-cta">
+      <button class="btn-black" onclick="openModal('getStartedModal')">Get Started</button>
+      <a href="#locations" class="link-underline">View Locations</a>
+    </div>
+    <div class="trust">★ Trusted by 50,000+ drivers</div>
+  </div>
+  <div class="hero-art" id="heroArt"></div>
+</section>
+
+<section class="section" id="features">
+  <div class="section-head">
+    <h2>Everything you need to park smarter</h2>
+    <p>ParkEase replaces circling blocks with a single tap. Built for commuters, visitors, and fleets alike.</p>
+  </div>
+  <div class="feature-grid">
+    <div class="feature-card">
+      <div class="feature-ic">📍</div>
+      <h3>Real-time Availability</h3>
+      <p>Live occupancy data so you always know where an open spot is before you arrive.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-ic">🛡️</div>
+      <h3>Secure Reservations</h3>
+      <p>Lock in your spot ahead of time with instant confirmation and easy cancellation.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-ic">🚗</div>
+      <h3>Multi-Vehicle Management</h3>
+      <p>Manage multiple cars and payment methods from one unified dashboard.</p>
+    </div>
+  </div>
+</section>
+
+<section class="section soft" id="how">
+  <div class="section-head">
+    <h2>How it works</h2>
+    <p>Three steps to your spot.</p>
+  </div>
+  <div class="steps">
+    <div class="step"><div class="step-line"></div><div class="step-num">1</div><h4>Find</h4><p>Search by location or let us suggest the best available spots near you.</p></div>
+    <div class="step"><div class="step-line"></div><div class="step-num">2</div><h4>Reserve</h4><p>Pick your duration and pay securely. Your spot is held until arrival.</p></div>
+    <div class="step"><div class="step-line"></div><div class="step-num">3</div><h4>Park</h4><p>Drive straight to your reserved spot. No tickets, no meters, no stress.</p></div>
+  </div>
+</section>
+
+<section class="section" id="pricing">
+  <div class="app-promo">
+    <div class="phone-mock">
+      <div class="phone-screen">
+        <div class="phone-notch"></div>
+        <div class="phone-map"><div class="dot" id="phoneDot"></div></div>
+        <div class="phone-bar"></div>
+        <div class="phone-bar"></div>
+        <div class="phone-bar dark"></div>
+      </div>
+    </div>
+    <div>
+      <h3>Park on the go</h3>
+      <p>The ParkEase app puts every parking spot in the city in your pocket. Get directions, extend sessions, and receive receipts — all from your phone.</p>
+      <div class="store-row">
+        <button class="store-btn" onclick="alert('The App Store listing isn\'t live yet — check back soon!')"> App Store</button>
+        <button class="store-btn" onclick="alert('The Google Play listing isn\'t live yet — check back soon!')">▶ Google Play</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section soft" id="locations">
+  <div class="section-head">
+    <h2>Find parking near you</h2>
+    <p>Type a city or neighborhood to see live availability.</p>
+  </div>
+  <div style="max-width:520px;margin:0 auto;display:flex;gap:10px;">
+    <input id="locSearch" type="text" placeholder="e.g. San Francisco, Downtown Seattle…" style="flex:1;padding:12px 14px;border:1px solid var(--border);border-radius:8px;font-size:14px;">
+    <button class="btn-black" onclick="searchLocation()">Search</button>
+  </div>
+  <p id="locResult" style="text-align:center;color:var(--muted);font-size:13.5px;margin-top:16px;"></p>
+</section>
+
+<section class="section" id="support">
+  <div class="section-head">
+    <h2>We're here to help</h2>
+    <p>Have a question before you sign up? Send us a note and we'll get back to you.</p>
+  </div>
+  <form style="max-width:480px;margin:0 auto;display:flex;flex-direction:column;gap:12px;" onsubmit="submitSupport(event)">
+    <input required type="email" placeholder="Your email" style="padding:12px 14px;border:1px solid var(--border);border-radius:8px;font-size:14px;">
+    <textarea required placeholder="How can we help?" rows="4" style="padding:12px 14px;border:1px solid var(--border);border-radius:8px;font-size:14px;font-family:inherit;"></textarea>
+    <button class="btn-black" type="submit" style="padding:12px;">Send message</button>
+  </form>
+</section>
+
+<footer class="site">
+  <div class="footer-row">
+    <div class="footer-brand"><b>ParkEase</b><span>© 2026 ParkEase Inc.</span></div>
+    <div class="footer-links">
+      <a href="#" onclick="alert('Privacy policy page coming soon.');return false;">Privacy</a>
+      <a href="#" onclick="alert('Terms page coming soon.');return false;">Terms</a>
+      <a href="#" onclick="alert('Cookie policy coming soon.');return false;">Cookies</a>
+      <a href="#support">Contact</a>
+    </div>
+    <div class="footer-social">
+      <span title="Twitter">🐦</span><span title="LinkedIn">💼</span><span title="Instagram">📷</span>
+    </div>
+  </div>
+</footer>
+
+<div class="modal-overlay" id="getStartedModal">
+  <div class="modal">
+    <h3>Let's get you parked</h3>
+    <p>Create a free ParkEase account to reserve your first spot.</p>
+    <div class="row">
+      <button class="secondary" onclick="closeModal('getStartedModal')">Not now</button>
+      <button class="primary" onclick="window.location.href='signup.html'">Create account</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Hero art: build a little lot grid, one pulsing "open" spot
+  (function(){
+    const cars = ["🚙","🚗","🚕","🚘"];
+    const art = document.getElementById("heroArt");
+    for (let i=0;i<9;i++){
+      const cell = document.createElement("div");
+      const isEmpty = i === 4; // center spot open
+      cell.className = "car-spot" + (isEmpty ? " empty pulse" : "");
+      cell.textContent = isEmpty ? "" : cars[i % cars.length];
+      art.appendChild(cell);
+    }
+  })();
+
+  function openModal(id){ document.getElementById(id).classList.add("show"); }
+  function closeModal(id){ document.getElementById(id).classList.remove("show"); }
+  document.querySelectorAll(".modal-overlay").forEach(ov=>{
+    ov.addEventListener("click", e=>{ if(e.target===ov) ov.classList.remove("show"); });
+  });
+
+  function searchLocation(){
+    const q = document.getElementById("locSearch").value.trim();
+    const result = document.getElementById("locResult");
+    if(!q){ result.textContent = "Enter a city or neighborhood to search."; return; }
+    // Placeholder result until this is wired to a real locations API/backend
+    const spots = Math.floor(Math.random()*40)+5;
+    result.textContent = `${spots} open spots found near "${q}". Sign up to reserve one.`;
+  }
+
+  function submitSupport(e){
+    e.preventDefault();
+    alert("Thanks — we'll get back to you within one business day.");
+    e.target.reset();
+  }
+</script>
+</body>
+</html>

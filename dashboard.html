@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Admin Monitoring · ParkEase Admin</title>
+<style>
+  :root{
+    --bg:#f7f7f7; --card:#ffffff; --border:#e6e6e6; --text:#111; --muted:#6b6b6b; --faint:#9a9a9a;
+    --black:#111; --green:#1f9d55; --green-bg:#eafbf0; --red:#d64545; --red-bg:#fdecec;
+    --occupied:#111; --reserved:#f2b134; --available:#dcefe0;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--text);display:flex;min-height:100vh;}
+
+  /* Sidebar */
+  #sidebar{width:255px;background:#fff;border-right:1px solid var(--border);display:flex;flex-direction:column;padding:20px 14px;flex-shrink:0;}
+  .brand{display:flex;align-items:center;gap:10px;padding:6px 8px 22px;font-weight:700;font-size:15px;}
+  .brand .logo{width:28px;height:28px;border:1.5px solid var(--text);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:13px;}
+  nav.navlist{display:flex;flex-direction:column;gap:2px;}
+  .navitem{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;font-size:14px;font-weight:500;color:var(--text);cursor:pointer;user-select:none;}
+  .navitem:hover{background:#f2f2f2;}
+  .navitem.active{background:var(--black);color:#fff;}
+  .navitem .ic{width:16px;text-align:center;}
+  .sidebar-bottom{margin-top:auto;border-top:1px solid var(--border);padding-top:14px;}
+  .user-row{display:flex;align-items:center;gap:10px;padding:6px 8px 12px;}
+  .avatar{width:30px;height:30px;border-radius:50%;background:#ddd;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:#555;}
+  .user-row .name{font-size:13px;font-weight:600;}
+  .user-row .role{font-size:11px;color:var(--faint);}
+  .logout-btn{width:100%;padding:9px;border:1px solid var(--border);background:#fff;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;}
+  .logout-btn:hover{background:#f5f5f5;}
+
+  /* Main */
+  #main{flex:1;padding:28px 32px;overflow-x:hidden;}
+  .page-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;flex-wrap:wrap;gap:14px;}
+  .page-header h1{margin:0 0 4px;font-size:26px;}
+  .page-header p{margin:0;color:var(--muted);font-size:14px;}
+  .header-actions{display:flex;align-items:center;gap:10px;}
+  .pill{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:20px;font-size:13px;font-weight:600;border:1px solid var(--border);background:#fff;cursor:pointer;}
+  .pill .dot{width:7px;height:7px;border-radius:50%;background:var(--green);}
+  .pill.inactive .dot{background:var(--red);}
+  .btn-black{background:var(--black);color:#fff;border:none;padding:9px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px;}
+  .btn-black:hover{opacity:.88;}
+  .btn-ghost{background:#fff;border:1px solid var(--border);padding:8px 10px;border-radius:8px;cursor:pointer;font-size:13px;}
+  .btn-ghost:hover{background:#f5f5f5;}
+  .btn-text{background:none;border:none;color:var(--text);font-weight:600;font-size:12.5px;cursor:pointer;text-decoration:underline;padding:0;}
+
+  section.page{display:none;}
+  section.page.active{display:block;}
+
+  /* Stat cards */
+  .stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:20px;}
+  .stat-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px;}
+  .stat-label{font-size:12.5px;color:var(--muted);margin-bottom:8px;}
+  .stat-value{font-size:26px;font-weight:700;display:flex;align-items:baseline;justify-content:space-between;}
+  .stat-value .sub{font-size:12px;color:var(--faint);font-weight:400;}
+  .stat-note{font-size:12px;color:var(--faint);margin-top:6px;}
+  .bar-track{margin-top:10px;height:5px;border-radius:4px;background:#eee;overflow:hidden;}
+  .bar-fill{height:100%;background:var(--black);}
+
+  /* content grid */
+  .grid-2col{display:grid;grid-template-columns:1.7fr 1fr;gap:20px;align-items:start;}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px;}
+  .card-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;}
+  .card-head h3{margin:0;font-size:15px;}
+  .card-head-actions{display:flex;gap:8px;}
+
+  table{width:100%;border-collapse:collapse;font-size:13.5px;}
+  thead th{text-align:left;font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--faint);font-weight:600;padding:8px 6px;border-bottom:1px solid var(--border);}
+  tbody td{padding:12px 6px;border-bottom:1px solid #f0f0f0;vertical-align:middle;}
+  tbody tr:last-child td{border-bottom:none;}
+  .userrow{display:flex;align-items:center;gap:10px;}
+  .status-pill{display:inline-block;padding:4px 10px;border-radius:20px;font-size:12px;font-weight:600;}
+  .status-pill.confirmed{background:var(--black);color:#fff;}
+  .status-pill.awaiting{background:#eee;color:#444;}
+  .status-pill.expired{background:var(--red-bg);color:var(--red);}
+  .status-pill.cancelled{background:#eee;color:#999;}
+  .status-pill.available{background:var(--green-bg);color:var(--green);}
+  .link-action{color:var(--text);font-weight:600;font-size:13px;text-decoration:underline;cursor:pointer;background:none;border:none;padding:0;}
+
+  .alert-item{display:flex;gap:10px;padding:12px 0;border-bottom:1px solid #f0f0f0;}
+  .alert-item:last-child{border-bottom:none;}
+  .alert-ic{width:26px;height:26px;border-radius:50%;background:#fdf3e0;color:#b8860b;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px;}
+  .alert-ic.info{background:#eaf1fb;color:#2a6fce;}
+  .alert-title{font-weight:700;font-size:13.5px;margin-bottom:2px;}
+  .alert-text{font-size:12.5px;color:var(--muted);margin-bottom:8px;}
+  .alert-actions{display:flex;gap:8px;}
+  .alert-actions button{font-size:12px;padding:6px 10px;border-radius:7px;border:1px solid var(--border);background:#fff;cursor:pointer;font-weight:600;}
+  .alert-actions button:hover{background:#f5f5f5;}
+  .alert-time{font-size:11px;color:var(--faint);}
+
+  .space-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #f0f0f0;font-size:13.5px;}
+  .space-row:last-of-type{border-bottom:none;}
+  .space-row b{font-weight:700;}
+
+  /* live map */
+  .map-legend{display:flex;gap:18px;margin-bottom:16px;font-size:13px;}
+  .legend-item{display:flex;align-items:center;gap:6px;}
+  .legend-swatch{width:13px;height:13px;border-radius:4px;}
+  .map-section{margin-bottom:22px;}
+  .map-section h4{font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin:0 0 10px;}
+  .space-grid{display:grid;grid-template-columns:repeat(12,1fr);gap:6px;}
+  .space-cell{aspect-ratio:1;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;cursor:pointer;color:#fff;border:1px solid rgba(0,0,0,.05);}
+  .space-cell.available{background:var(--available);color:#1f9d55;}
+  .space-cell.occupied{background:var(--occupied);}
+  .space-cell.reserved{background:var(--reserved);color:#5a4300;}
+  .space-cell:hover{outline:2px solid #111;outline-offset:1px;}
+
+  /* filter bar */
+  .filter-bar{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;}
+  .filter-bar select, .filter-bar input{padding:8px 10px;border-radius:8px;border:1px solid var(--border);font-size:13px;}
+
+  /* modal */
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);display:none;align-items:center;justify-content:center;z-index:50;}
+  .modal-overlay.show{display:flex;}
+  .modal{background:#fff;border-radius:14px;padding:24px;width:100%;max-width:420px;max-height:88vh;overflow:auto;}
+  .modal h3{margin:0 0 14px;font-size:17px;}
+  .modal .field{margin-bottom:12px;}
+  .modal label{display:block;font-size:12.5px;font-weight:600;margin-bottom:5px;}
+  .modal input, .modal select{width:100%;padding:9px 10px;border:1px solid var(--border);border-radius:8px;font-size:13.5px;}
+  .modal-actions{display:flex;gap:10px;margin-top:18px;}
+  .modal-actions button{flex:1;padding:10px;border-radius:8px;font-size:13.5px;font-weight:600;cursor:pointer;}
+  .modal-actions .cancel{background:#fff;border:1px solid var(--border);}
+  .modal-actions .confirm{background:var(--black);color:#fff;border:none;}
+
+  .toast{position:fixed;bottom:24px;right:24px;background:#111;color:#fff;padding:12px 18px;border-radius:10px;font-size:13.5px;z-index:60;opacity:0;transform:translateY(10px);transition:.2s;pointer-events:none;}
+  .toast.show{opacity:1;transform:translateY(0);}
+
+  .empty{color:var(--faint);font-size:13px;padding:20px 0;text-align:center;}
+
+  @media(max-width:900px){
+    .stat-grid{grid-template-columns:repeat(2,1fr);}
+    .grid-2col{grid-template-columns:1fr;}
+    .space-grid{grid-template-columns:repeat(8,1fr);}
+  }
+</style>
+</head>
+<body>
+
+<div id="sidebar">
+  <div class="brand"><span class="logo">P</span> ParkEase Admin</div>
+  <nav class="navlist">
+    <div class="navitem active" data-section="overview">📈 Overview</div>
+    <div class="navitem" data-section="map">🗺️ Live Map</div>
+    <div class="navitem" data-section="reservations">🗓️ Reservations</div>
+    <div class="navitem" data-section="users">👥 Users</div>
+    <div class="navitem" data-section="history">⏱️ History</div>
+  </nav>
+  <div class="sidebar-bottom">
+    <div class="user-row">
+      <div class="avatar">AU</div>
+      <div>
+        <div class="name">Admin User</div>
+        <div class="role">Attendant Mode</div>
+      </div>
+    </div>
+    <button class="logout-btn" onclick="if(confirm('Log out?')) window.location.href='login.html'">↩ Logout</button>
+  </div>
+</div>
+
+<div id="main">
+
+  <!-- OVERVIEW -->
+  <section class="page active" id="page-overview">
+    <div class="page-header">
+      <div>
+        <h1>Admin Monitoring</h1>
+        <p>Real-time parking activities and reservation management</p>
+      </div>
+      <div class="header-actions">
+        <div class="pill" id="systemPill" onclick="toggleSystem()"><span class="dot"></span> <span id="systemPillText">System Active</span></div>
+        <button class="btn-black" onclick="openManualEntry()">+ Manual Entry</button>
+      </div>
+    </div>
+
+    <div class="stat-grid">
+      <div class="stat-card">
+        <div class="stat-label">Total Occupancy</div>
+        <div class="stat-value"><span id="statOccPct">–</span> <span class="sub" id="statOccFrac"></span></div>
+        <div class="bar-track"><div class="bar-fill" id="statOccBar" style="width:0%"></div></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Active Reservations</div>
+        <div class="stat-value" id="statActive">–</div>
+        <div class="stat-note" id="statActiveNote"></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Expired (No-show)</div>
+        <div class="stat-value" id="statExpired">–</div>
+        <div class="stat-note">Last 24 hours</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Abuse Flags</div>
+        <div class="stat-value" id="statFlags">–</div>
+        <div class="stat-note">Requires review</div>
+      </div>
+    </div>
+
+    <div class="grid-2col">
+      <div class="card">
+        <div class="card-head">
+          <h3>Active Reservations &amp; Arrivals</h3>
+          <div class="card-head-actions">
+            <button class="btn-ghost" title="Filter" onclick="document.getElementById('overviewFilterRow').classList.toggle('show')">🔽</button>
+            <button class="btn-ghost" title="Export CSV" onclick="exportCSV()">⬇️</button>
+          </div>
+        </div>
+        <div id="overviewFilterRow" class="filter-bar" style="display:none;">
+          <select id="overviewStatusFilter" onchange="renderOverviewTable()">
+            <option value="all">All statuses</option>
+            <option value="confirmed">Confirmed</option>
+            <option value="awaiting">Awaiting Arrival</option>
+          </select>
+        </div>
+        <table>
+          <thead><tr><th>User</th><th>Space</th><th>Reserved At</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody id="overviewTableBody"></tbody>
+        </table>
+      </div>
+
+      <div>
+        <div class="card" style="margin-bottom:20px;">
+          <div class="card-head"><h3>Reservation Alerts</h3></div>
+          <div id="alertsList"></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><h3>Space Management</h3></div>
+          <div id="spaceMgmtList"></div>
+          <button class="btn-text" style="margin-top:10px;" onclick="goTo('map')">View Detailed Map</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- LIVE MAP -->
+  <section class="page" id="page-map">
+    <div class="page-header">
+      <div><h1>Live Map</h1><p>Click a space to release, reserve, or view details</p></div>
+      <div class="header-actions"><button class="btn-black" onclick="openManualEntry()">+ Manual Entry</button></div>
+    </div>
+    <div class="card">
+      <div class="map-legend">
+        <div class="legend-item"><span class="legend-swatch" style="background:var(--available)"></span> Available</div>
+        <div class="legend-item"><span class="legend-swatch" style="background:var(--reserved)"></span> Reserved</div>
+        <div class="legend-item"><span class="legend-swatch" style="background:var(--occupied)"></span> Occupied</div>
+      </div>
+      <div id="mapSections"></div>
+    </div>
+  </section>
+
+  <!-- RESERVATIONS -->
+  <section class="page" id="page-reservations">
+    <div class="page-header">
+      <div><h1>Reservations</h1><p>All reservations, current and past</p></div>
+      <div class="header-actions"><button class="btn-black" onclick="openManualEntry()">+ Manual Entry</button></div>
+    </div>
+    <div class="card">
+      <div class="filter-bar">
+        <input type="text" id="resSearch" placeholder="Search by user or space…" oninput="renderReservationsTable()" style="flex:1;min-width:200px;">
+        <select id="resStatusFilter" onchange="renderReservationsTable()">
+          <option value="all">All statuses</option>
+          <option value="confirmed">Confirmed</option>
+          <option value="awaiting">Awaiting Arrival</option>
+          <option value="expired">Expired</option>
+          <option value="cancelled">Cancelled</option>
+        </select>
+        <button class="btn-ghost" onclick="exportCSV()">⬇️ Export</button>
+      </div>
+      <table>
+        <thead><tr><th>User</th><th>Space</th><th>Reserved At</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody id="reservationsTableBody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- USERS -->
+  <section class="page" id="page-users">
+    <div class="page-header">
+      <div><h1>Users</h1><p>Drivers and staff on ParkEase</p></div>
+      <div class="header-actions"><button class="btn-black" onclick="openUserModal()">+ Add User</button></div>
+    </div>
+    <div class="card">
+      <div class="filter-bar">
+        <input type="text" id="userSearch" placeholder="Search users…" oninput="renderUsersTable()" style="flex:1;">
+      </div>
+      <table>
+        <thead><tr><th>User</th><th>Role</th><th>Vehicle</th><th>Flags</th><th>Actions</th></tr></thead>
+        <tbody id="usersTableBody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- HISTORY -->
+  <section class="page" id="page-history">
+    <div class="page-header">
+      <div><h1>History</h1><p>Log of admin and system actions</p></div>
+    </div>
+    <div class="card">
+      <table>
+        <thead><tr><th>Time</th><th>Event</th></tr></thead>
+        <tbody id="historyTableBody"></tbody>
+      </table>
+    </div>
+  </section>
+
+</div>
+
+<!-- Manual Entry Modal -->
+<div class="modal-overlay" id="manualEntryModal">
+  <div class="modal">
+    <h3>Manual Entry</h3>
+    <div class="field"><label>User name</label><input id="meUser" placeholder="e.g. Priya Nair"></div>
+    <div class="field"><label>Space</label><select id="meSpace"></select></div>
+    <div class="field"><label>Status</label>
+      <select id="meStatus">
+        <option value="confirmed">Confirmed</option>
+        <option value="awaiting">Awaiting Arrival</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="cancel" onclick="closeModal('manualEntryModal')">Cancel</button>
+      <button class="confirm" onclick="submitManualEntry()">Create Reservation</button>
+    </div>
+  </div>
+</div>
+
+<!-- Manage Reservation Modal -->
+<div class="modal-overlay" id="manageModal">
+  <div class="modal">
+    <h3>Manage Reservation</h3>
+    <div class="field"><label>User</label><input id="mgUser" disabled></div>
+    <div class="field"><label>Space</label><input id="mgSpace" disabled></div>
+    <div class="field"><label>Status</label>
+      <select id="mgStatus">
+        <option value="confirmed">Confirmed</option>
+        <option value="awaiting">Awaiting Arrival</option>
+        <option value="expired">Expired</option>
+        <option value="cancelled">Cancelled</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="cancel" onclick="closeModal('manageModal')">Cancel</button>
+      <button class="confirm" onclick="saveManage()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add User Modal -->
+<div class="modal-overlay" id="userModal">
+  <div class="modal">
+    <h3>Add User</h3>
+    <div class="field"><label>Name</label><input id="uName" placeholder="Full name"></div>
+    <div class="field"><label>Role</label>
+      <select id="uRole"><option value="Driver">Driver</option><option value="Attendant">Attendant</option><option value="Admin">Admin</option></select>
+    </div>
+    <div class="field"><label>Vehicle</label><input id="uVehicle" placeholder="e.g. Toyota Yaris"></div>
+    <div class="modal-actions">
+      <button class="cancel" onclick="closeModal('userModal')">Cancel</button>
+      <button class="confirm" onclick="submitUser()">Add User</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="dashboard.js"></script>
+</body>
+</html>

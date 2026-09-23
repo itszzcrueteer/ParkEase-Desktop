@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Create your account · ParkEase</title>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="card">
+    <div class="logo">P</div>
+    <h1>Create your account</h1>
+    <p class="subtitle">Join ParkEase and manage your parking effortlessly</p>
+
+    <div id="statusBanner" class="status-banner"></div>
+
+    <form id="signupForm" novalidate>
+      <p class="section-label">Personal information</p>
+
+      <div class="field-row">
+        <div class="field">
+          <label for="firstName">First name</label>
+          <input type="text" id="firstName" name="firstName" placeholder="Alex" autocomplete="given-name" required />
+          <p class="error-text" data-error-for="firstName"></p>
+        </div>
+        <div class="field">
+          <label for="lastName">Last name</label>
+          <input type="text" id="lastName" name="lastName" placeholder="Rivera" autocomplete="family-name" required />
+          <p class="error-text" data-error-for="lastName"></p>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="email">Email address</label>
+        <input type="email" id="email" name="email" placeholder="alex@example.com" autocomplete="email" required />
+        <p class="error-text" data-error-for="email"></p>
+      </div>
+
+      <p class="section-label">Vehicle profile</p>
+
+      <div class="field-row">
+        <div class="field">
+          <label for="vehicle">Vehicle Make/Model</label>
+          <input type="text" id="vehicle" name="vehicle" placeholder="Honda Civic" required />
+          <p class="error-text" data-error-for="vehicle"></p>
+        </div>
+        <div class="field">
+          <label for="plate">License Plate</label>
+          <input type="text" id="plate" name="plate" placeholder="ABC-1234" required />
+          <p class="error-text" data-error-for="plate"></p>
+        </div>
+      </div>
+      <p class="hint">* You can add more vehicles later in your profile settings.</p>
+
+      <p class="section-label">Security</p>
+
+      <div class="field-row">
+        <div class="field">
+          <label for="password">Password</label>
+          <div class="input-wrap has-toggle">
+            <input type="password" id="password" name="password" placeholder="••••••••" autocomplete="new-password" required minlength="8" />
+            <button type="button" class="toggle-visibility" data-toggle-for="password" aria-label="Show password">Show</button>
+          </div>
+          <p class="error-text" data-error-for="password"></p>
+        </div>
+        <div class="field">
+          <label for="confirmPassword">Confirm password</label>
+          <div class="input-wrap has-toggle">
+            <input type="password" id="confirmPassword" name="confirmPassword" placeholder="••••••••" autocomplete="new-password" required minlength="8" />
+            <button type="button" class="toggle-visibility" data-toggle-for="confirmPassword" aria-label="Show password">Show</button>
+          </div>
+          <p class="error-text" data-error-for="confirmPassword"></p>
+        </div>
+      </div>
+
+      <div class="checkbox-row">
+        <input type="checkbox" id="terms" name="terms" required />
+        <label for="terms" style="margin:0; font-weight:400;">
+          I agree to the
+          <a href="terms-of-service.html">Terms of Service</a>
+          and
+          <a href="privacy-policy.html">Privacy Policy</a>,
+          including the reservation abuse prevention policies.
+        </label>
+      </div>
+      <p class="error-text" data-error-for="terms"></p>
+
+      <button type="submit" class="btn-primary" id="submitBtn">Create Account</button>
+    </form>
+
+    <p class="form-footer">
+      Already have an account?
+      <a href="login.html">Log in</a>
+    </p>
+  </div>
+
+  <script src="app-config.js"></script>
+  <script src="signup.js"></script>
+</body>
+</html>

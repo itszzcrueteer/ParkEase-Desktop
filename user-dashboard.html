@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Dashboard · ParkEase</title>
+<style>
+  :root{
+    --bg:#f7f7f7; --card:#fff; --border:#e6e6e6; --text:#111; --muted:#6b6b6b; --faint:#9a9a9a;
+    --black:#111; --green:#1f9d55; --green-bg:#eafbf0;
+    --free:#fafafa; --occupied:#eee; --yours:#111;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--text);display:flex;min-height:100vh;}
+
+  #sidebar{width:255px;background:#fff;border-right:1px solid var(--border);display:flex;flex-direction:column;padding:20px 14px;flex-shrink:0;}
+  .brand{display:flex;align-items:center;gap:10px;padding:6px 8px 22px;font-weight:700;font-size:16px;}
+  .brand .logo{width:26px;height:26px;background:#111;color:#fff;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:13px;}
+  nav.navlist{display:flex;flex-direction:column;gap:2px;}
+  .navitem{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;font-size:14px;font-weight:500;cursor:pointer;user-select:none;}
+  .navitem:hover{background:#f2f2f2;}
+  .navitem.active{background:#eee;font-weight:700;}
+  .support-box{margin-top:auto;background:var(--bg);border-radius:12px;padding:16px;}
+  .support-box p{margin:0 0 4px;font-size:13px;font-weight:600;}
+  .support-box span{display:block;font-size:12px;color:var(--muted);margin-bottom:12px;}
+  .support-box button{width:100%;padding:9px;border-radius:8px;border:1px solid var(--border);background:#fff;font-size:13px;font-weight:600;cursor:pointer;}
+  .support-box button:hover{background:#f5f5f5;}
+
+  #main{flex:1;padding:0 32px 40px;overflow-x:hidden;}
+  header.topbar{display:flex;justify-content:space-between;align-items:center;padding:24px 0;border-bottom:1px solid var(--border);margin-bottom:24px;position:relative;}
+  header.topbar h1{font-size:22px;margin:0;font-weight:700;}
+  .top-right{display:flex;align-items:center;gap:18px;position:relative;}
+  .bell{position:relative;cursor:pointer;font-size:18px;}
+  .bell .dot{position:absolute;top:-2px;right:-2px;width:8px;height:8px;border-radius:50%;background:#d64545;}
+  .user-chip{display:flex;align-items:center;gap:10px;cursor:pointer;}
+  .avatar{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#c9c2f0,#f2c6c6);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#333;}
+  .user-chip .name{font-size:13.5px;font-weight:700;}
+  .user-chip .role{font-size:11.5px;color:var(--faint);}
+
+  .dropdown{position:absolute;top:calc(100% + 8px);background:#fff;border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.08);min-width:210px;display:none;z-index:30;overflow:hidden;}
+  .dropdown.show{display:block;}
+  .dropdown a, .dropdown .ddi{display:block;padding:10px 14px;font-size:13.5px;cursor:pointer;color:var(--text);}
+  .dropdown a:hover, .dropdown .ddi:hover{background:#f5f5f5;}
+  .dropdown .ddi.muted{color:var(--muted);font-size:12.5px;cursor:default;}
+  #bellDropdown{right:120px;width:280px;}
+  #userDropdown{right:0;}
+
+  section.page{display:none;}
+  section.page.active{display:block;}
+
+  .grid-2col{display:grid;grid-template-columns:1.7fr 1fr;gap:20px;align-items:start;}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:22px;}
+  .card + .card{margin-top:20px;}
+  .card-eyebrow{font-size:11.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--faint);font-weight:600;margin-bottom:4px;}
+  .card-title-row{display:flex;justify-content:space-between;align-items:flex-start;}
+  .card-title-row h2{margin:2px 0 2px;font-size:19px;}
+  .card-title-row .addr{color:var(--muted);font-size:13.5px;margin:0;}
+  .status-pill{padding:5px 12px;border-radius:20px;font-size:12px;font-weight:600;background:#eee;display:flex;align-items:center;gap:6px;}
+  .status-pill .dot{width:6px;height:6px;border-radius:50%;background:var(--green);}
+
+  .stat-boxes{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:18px 0;}
+  .stat-box{background:var(--bg);border-radius:10px;padding:14px;}
+  .stat-box .lbl{font-size:11.5px;color:var(--faint);margin-bottom:6px;}
+  .stat-box .val{font-size:17px;font-weight:700;}
+
+  .remaining-row{display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--border);padding-top:16px;}
+  .remaining-row .lbl{font-size:12px;color:var(--faint);margin-bottom:4px;}
+  .remaining-row .val{font-size:30px;font-weight:800;font-variant-numeric:tabular-nums;}
+  .btn-outline{background:#fff;border:1px solid var(--border);padding:10px 16px;border-radius:8px;font-size:13.5px;font-weight:600;cursor:pointer;}
+  .btn-outline:hover{background:#f5f5f5;}
+  .btn-black{background:var(--black);color:#fff;border:none;padding:10px 16px;border-radius:8px;font-size:13.5px;font-weight:600;cursor:pointer;}
+  .btn-black:hover{opacity:.88;}
+  .btn-black:disabled{opacity:.5;cursor:not-allowed;}
+
+  .vehicle-row{display:flex;align-items:center;gap:12px;padding:12px;background:var(--bg);border-radius:10px;margin-bottom:10px;}
+  .vehicle-ic{width:36px;height:36px;border-radius:8px;background:#fff;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:16px;}
+  .vehicle-row b{font-size:13.5px;display:block;}
+  .vehicle-row span{font-size:12px;color:var(--muted);}
+  .vehicle-row .rm{margin-left:auto;background:none;border:none;color:var(--faint);cursor:pointer;font-size:13px;}
+  .add-vehicle-row{display:flex;align-items:center;gap:12px;padding:12px;border:1px dashed var(--border);border-radius:10px;cursor:pointer;color:var(--muted);font-size:13.5px;font-weight:600;}
+  .add-vehicle-row:hover{background:var(--bg);}
+
+  .map-legend{display:flex;gap:16px;font-size:12.5px;color:var(--muted);}
+  .legend-item{display:flex;align-items:center;gap:6px;}
+  .legend-swatch{width:11px;height:11px;border-radius:3px;border:1px solid var(--border);}
+  .legend-swatch.free{background:var(--free);}
+  .legend-swatch.occupied{background:var(--occupied);}
+  .legend-swatch.yours{background:var(--yours);}
+  .lot-label{font-size:12.5px;color:var(--muted);margin:14px 0 10px;}
+  .space-grid{display:grid;grid-template-columns:repeat(8,1fr);gap:8px;}
+  .space-cell{aspect-ratio:1;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;cursor:pointer;background:var(--free);color:#bbb;border:1px solid var(--border);}
+  .space-cell.occupied{background:var(--occupied);color:#aaa;cursor:default;}
+  .space-cell.yours{background:var(--yours);color:#fff;cursor:default;}
+  .map-hint{font-size:12px;color:var(--faint);margin-top:14px;}
+
+  .this-month-row{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:14px;}
+  .this-month-row .lbl{font-size:12.5px;color:var(--muted);}
+  .this-month-row .val{font-size:20px;font-weight:700;}
+  .this-month-row .note{font-size:11.5px;color:var(--faint);}
+  .divider{border-top:1px solid var(--border);margin:14px 0;}
+
+  .activity-row{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid #f0f0f0;}
+  .activity-row:last-child{border-bottom:none;}
+  .activity-check{width:26px;height:26px;border-radius:50%;background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;}
+  .activity-row b{font-size:13.5px;display:block;}
+  .activity-row span{font-size:12px;color:var(--muted);}
+  .activity-price{margin-left:auto;font-weight:700;font-size:13.5px;}
+
+  table{width:100%;border-collapse:collapse;font-size:13.5px;}
+  thead th{text-align:left;font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--faint);font-weight:600;padding:8px 6px;border-bottom:1px solid var(--border);}
+  tbody td{padding:12px 6px;border-bottom:1px solid #f0f0f0;}
+
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);display:none;align-items:center;justify-content:center;z-index:50;}
+  .modal-overlay.show{display:flex;}
+  .modal{background:#fff;border-radius:14px;padding:24px;width:100%;max-width:400px;}
+  .modal h3{margin:0 0 6px;}
+  .modal .sub{color:var(--muted);font-size:13px;margin:0 0 16px;}
+  .modal .field{margin-bottom:12px;}
+  .modal label{display:block;font-size:12.5px;font-weight:600;margin-bottom:5px;}
+  .modal input, .modal select{width:100%;padding:9px 10px;border:1px solid var(--border);border-radius:8px;font-size:13.5px;}
+  .modal-actions{display:flex;gap:10px;margin-top:16px;}
+  .modal-actions button{flex:1;padding:10px;border-radius:8px;font-weight:600;font-size:13.5px;cursor:pointer;}
+  .modal-actions .cancel{background:#fff;border:1px solid var(--border);}
+  .modal-actions .confirm{background:var(--black);color:#fff;border:none;}
+
+  .toast{position:fixed;bottom:24px;right:24px;background:#111;color:#fff;padding:12px 18px;border-radius:10px;font-size:13.5px;z-index:60;opacity:0;transform:translateY(10px);transition:.2s;pointer-events:none;}
+  .toast.show{opacity:1;transform:translateY(0);}
+
+  .settings-row{display:flex;justify-content:space-between;align-items:center;padding:14px 0;border-bottom:1px solid #f0f0f0;}
+  .settings-row:last-child{border-bottom:none;}
+  .toggle{width:40px;height:22px;border-radius:20px;background:#ddd;position:relative;cursor:pointer;flex-shrink:0;}
+  .toggle.on{background:#111;}
+  .toggle .knob{position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:#fff;transition:.15s;}
+  .toggle.on .knob{left:20px;}
+
+  @media(max-width:900px){
+    .grid-2col{grid-template-columns:1fr;}
+    .stat-boxes{grid-template-columns:repeat(2,1fr);}
+    .space-grid{grid-template-columns:repeat(6,1fr);}
+  }
+</style>
+</head>
+<body>
+
+<div id="sidebar">
+  <div class="brand"><span class="logo">P</span> ParkEase</div>
+  <nav class="navlist">
+    <div class="navitem active" data-section="dashboard">🏠 Dashboard</div>
+    <div class="navitem" data-section="vehicles">🚗 My Vehicles</div>
+    <div class="navitem" data-section="history">🕘 History</div>
+    <div class="navitem" data-section="settings">⚙️ Settings</div>
+  </nav>
+  <div class="support-box">
+    <p>Need help parking?</p>
+    <span>Our support team is available to assist you with any issues.</span>
+    <button onclick="openModal('supportModal')">Contact Support</button>
+  </div>
+</div>
+
+<div id="main">
+  <header class="topbar">
+    <h1 id="greeting">Good morning, Daniel</h1>
+    <div class="top-right">
+      <div class="bell" onclick="toggleDropdown('bellDropdown')">🔔<span class="dot" id="bellDot"></span></div>
+      <div class="user-chip" onclick="toggleDropdown('userDropdown')">
+        <div class="avatar">DW</div>
+        <div><div class="name">Daniel Whitman</div><div class="role">Regular User</div></div>
+        <span style="font-size:11px;color:var(--faint);">▾</span>
+      </div>
+      <div class="dropdown" id="bellDropdown"></div>
+      <div class="dropdown" id="userDropdown">
+        <div class="ddi" onclick="goTo('settings');toggleDropdown('userDropdown')">Profile &amp; Settings</div>
+        <div class="ddi" onclick="openModal('supportModal');toggleDropdown('userDropdown')">Help &amp; Support</div>
+        <a href="login.html">Log out</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- DASHBOARD -->
+  <section class="page active" id="page-dashboard">
+    <div class="grid-2col">
+      <div>
+        <div class="card">
+          <div class="card-title-row">
+            <div>
+              <div class="card-eyebrow">Active Reservation</div>
+              <h2>Metro Central Garage</h2>
+              <p class="addr">420 Market St, San Francisco · Zone B</p>
+            </div>
+            <div class="status-pill" id="resStatusPill"><span class="dot"></span> Confirmed</div>
+          </div>
+
+          <div class="stat-boxes">
+            <div class="stat-box"><div class="lbl">Space</div><div class="val" id="resSpace">B-14</div></div>
+            <div class="stat-box"><div class="lbl">Starts</div><div class="val">09:00</div></div>
+            <div class="stat-box"><div class="lbl">Ends</div><div class="val" id="resEnds">14:30</div></div>
+            <div class="stat-box"><div class="lbl">Rate</div><div class="val">$4.50<span style="font-size:12px;font-weight:400;color:var(--faint);">/hr</span></div></div>
+          </div>
+
+          <div class="remaining-row">
+            <div>
+              <div class="lbl">Time remaining</div>
+              <div class="val" id="timeRemaining">--:--:--</div>
+            </div>
+            <div style="display:flex;gap:10px;">
+              <button class="btn-outline" onclick="extendReservation()">Extend</button>
+              <button class="btn-black" id="confirmArrivalBtn" onclick="confirmArrival()">Confirm Arrival</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title-row" style="margin-bottom:4px;">
+            <div>
+              <h2 style="font-size:17px;">Live Lot Map</h2>
+              <p class="addr" id="mapSummary">Metro Central Garage</p>
+            </div>
+            <div class="map-legend">
+              <div class="legend-item"><span class="legend-swatch free"></span> Free</div>
+              <div class="legend-item"><span class="legend-swatch occupied"></span> Occupied</div>
+              <div class="legend-item"><span class="legend-swatch yours"></span> Yours</div>
+            </div>
+          </div>
+          <div class="lot-label">Lot A · Section B</div>
+          <div class="space-grid" id="lotGrid"></div>
+          <p class="map-hint">Tap a free space to preview · Space <b id="yourSpaceLabel">B-14</b> is your reservation</p>
+        </div>
+
+        <div class="card">
+          <div class="card-title-row" style="margin-bottom:4px;">
+            <h2 style="font-size:17px;">Recent Activity</h2>
+            <span class="link-action" style="font-weight:600;font-size:13px;cursor:pointer;" onclick="goTo('history')">View all</span>
+          </div>
+          <div id="recentActivityList"></div>
+        </div>
+      </div>
+
+      <div>
+        <div class="card">
+          <h2 style="font-size:17px;margin:0 0 14px;">Your Vehicle</h2>
+          <div id="primaryVehicleBox"></div>
+          <p style="font-size:12px;color:var(--faint);margin:16px 0 8px;">Other vehicles</p>
+          <div id="otherVehiclesBox"></div>
+          <div class="add-vehicle-row" onclick="openModal('vehicleModal')">+ Add vehicle <span style="font-weight:400;color:var(--faint);margin-left:4px;">Link a new plate</span></div>
+        </div>
+
+        <div class="card">
+          <h2 style="font-size:17px;margin:0 0 14px;">This Month</h2>
+          <div class="this-month-row"><span class="lbl">Sessions</span></div>
+          <div class="val" id="statSessions" style="font-size:20px;font-weight:700;margin-bottom:14px;"></div>
+          <div class="this-month-row"><span class="lbl">Hours parked</span></div>
+          <div class="val" id="statHours" style="font-size:20px;font-weight:700;margin-bottom:14px;"></div>
+          <div class="this-month-row"><span class="lbl">Total spent</span></div>
+          <div class="val" id="statSpent" style="font-size:20px;font-weight:700;margin-bottom:14px;"></div>
+          <div class="divider"></div>
+          <div class="this-month-row">
+            <span class="lbl">Average per session</span>
+          </div>
+          <div class="val" id="statAvg" style="font-size:16px;font-weight:700;"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- VEHICLES -->
+  <section class="page" id="page-vehicles">
+    <div class="card">
+      <div class="card-title-row" style="margin-bottom:14px;">
+        <h2 style="font-size:19px;">My Vehicles</h2>
+        <button class="btn-black" onclick="openModal('vehicleModal')">+ Add vehicle</button>
+      </div>
+      <div id="allVehiclesList"></div>
+    </div>
+  </section>
+
+  <!-- HISTORY -->
+  <section class="page" id="page-history">
+    <div class="card">
+      <h2 style="font-size:19px;margin:0 0 14px;">Parking History</h2>
+      <table>
+        <thead><tr><th>Location</th><th>Date</th><th>Duration</th><th>Space / Meter</th><th>Total</th></tr></thead>
+        <tbody id="historyTableBody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- SETTINGS -->
+  <section class="page" id="page-settings">
+    <div class="card" style="max-width:520px;">
+      <h2 style="font-size:19px;margin:0 0 16px;">Settings</h2>
+      <div class="field" style="margin-bottom:14px;">
+        <label style="font-size:12.5px;font-weight:600;display:block;margin-bottom:5px;">Full name</label>
+        <input id="setName" type="text" value="Daniel Whitman" style="width:100%;padding:9px 10px;border:1px solid var(--border);border-radius:8px;font-size:13.5px;">
+      </div>
+      <div class="field" style="margin-bottom:14px;">
+        <label style="font-size:12.5px;font-weight:600;display:block;margin-bottom:5px;">Email</label>
+        <input id="setEmail" type="email" value="daniel.whitman@example.com" style="width:100%;padding:9px 10px;border:1px solid var(--border);border-radius:8px;font-size:13.5px;">
+      </div>
+      <div class="settings-row">
+        <span>Email notifications</span>
+        <div class="toggle on" id="toggleEmail" onclick="this.classList.toggle('on')"><div class="knob"></div></div>
+      </div>
+      <div class="settings-row">
+        <span>SMS reminders</span>
+        <div class="toggle" id="toggleSms" onclick="this.classList.toggle('on')"><div class="knob"></div></div>
+      </div>
+      <button class="btn-black" style="margin-top:18px;" onclick="saveSettings()">Save changes</button>
+    </div>
+  </section>
+</div>
+
+<!-- Space preview modal -->
+<div class="modal-overlay" id="spaceModal">
+  <div class="modal">
+    <h3 id="spaceModalTitle">Space</h3>
+    <p class="sub" id="spaceModalSub">Metro Central Garage · Lot A, Section B</p>
+    <div class="modal-actions">
+      <button class="cancel" onclick="closeModal('spaceModal')">Close</button>
+      <button class="confirm" onclick="reserveFromMap()">Reserve this spot</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add vehicle modal -->
+<div class="modal-overlay" id="vehicleModal">
+  <div class="modal">
+    <h3>Add a vehicle</h3>
+    <div class="field"><label>Make &amp; model</label><input id="vMakeModel" placeholder="e.g. Subaru Outback"></div>
+    <div class="field"><label>License plate</label><input id="vPlate" placeholder="e.g. 4XPL-882"></div>
+    <div class="field"><label>Type</label>
+      <select id="vType"><option>Gas</option><option>EV</option><option>Hybrid</option></select>
+    </div>
+    <div class="modal-actions">
+      <button class="cancel" onclick="closeModal('vehicleModal')">Cancel</button>
+      <button class="confirm" onclick="submitVehicle()">Add vehicle</button>
+    </div>
+  </div>
+</div>
+
+<!-- Support modal -->
+<div class="modal-overlay" id="supportModal">
+  <div class="modal">
+    <h3>Contact Support</h3>
+    <p class="sub">Tell us what's going on and we'll follow up by email.</p>
+    <div class="field"><label>Message</label><input id="supportMsg" placeholder="I'm having trouble with…"></div>
+    <div class="modal-actions">
+      <button class="cancel" onclick="closeModal('supportModal')">Cancel</button>
+      <button class="confirm" onclick="submitSupport()">Send</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="user-dashboard.js"></script>
+</body>
+</html>
