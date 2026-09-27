@@ -160,18 +160,35 @@
 
 <div id="main">
   <header class="topbar">
-    <h1 id="greeting">Good morning, Daniel</h1>
+    <h1 id="greeting">Welcome to ParkEase</h1>
+
     <div class="top-right">
-      <div class="bell" onclick="toggleDropdown('bellDropdown')">🔔<span class="dot" id="bellDot"></span></div>
+      <div class="bell" onclick="toggleDropdown('bellDropdown')">
+        🔔<span class="dot" id="bellDot"></span>
+      </div>
+
       <div class="user-chip" onclick="toggleDropdown('userDropdown')">
-        <div class="avatar">DW</div>
-        <div><div class="name">Daniel Whitman</div><div class="role">Regular User</div></div>
+        <div class="avatar" id="profileInitials">U</div>
+
+        <div>
+          <div class="name" id="profileName">User</div>
+          <div class="role" id="profileRole">Regular User</div>
+        </div>
+
         <span style="font-size:11px;color:var(--faint);">▾</span>
       </div>
+
       <div class="dropdown" id="bellDropdown"></div>
+
       <div class="dropdown" id="userDropdown">
-        <div class="ddi" onclick="goTo('settings');toggleDropdown('userDropdown')">Profile &amp; Settings</div>
-        <div class="ddi" onclick="openModal('supportModal');toggleDropdown('userDropdown')">Help &amp; Support</div>
+        <div class="ddi" onclick="goTo('settings');toggleDropdown('userDropdown')">
+          Profile &amp; Settings
+        </div>
+
+        <div class="ddi" onclick="openModal('supportModal');toggleDropdown('userDropdown')">
+          Help &amp; Support
+        </div>
+
         <a href="login.html">Log out</a>
       </div>
     </div>

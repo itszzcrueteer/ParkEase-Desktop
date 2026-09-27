@@ -1,314 +1,706 @@
-/* ===================== GREETING ===================== */
+
+/*  API CONFIG  */
+
+// Use app-config.js if it defines API_BASE_URL.
+// Otherwise, use the local Flask server.
+const API_ROOT = (
+  typeof API_BASE_URL !== "undefined"
+    ? API_BASE_URL
+    : "http://127.0.0.1:5001"
+)
+  .replace(/\/+$/, "")
+  .replace(/\/api$/, "");
+
+const TOTAL_SPACES = 48;
+
+function getSavedUser() {
+  const saved =
+    localStorage.getItem("parkease_user") ||
+    sessionStorage.getItem("parkease_user");
+
+  try {
+    return saved ? JSON.parse(saved) : null;
+  } catch {
+    return null;
+  }
+}
+
+function getToken() {
+  return (
+    localStorage.getItem("parkease_token") ||
+    sessionStorage.getItem("parkease_token")
+  );
+}
+
+async function apiRequest(path, options = {}) {
+  const headers = {
+    ...(options.headers || {}),
+  };
+
+  const token = getToken();
+
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
+  if (options.body) {
+    headers["Content-Type"] = "application/json";
+  }
+
+  const response = await fetch(`${API_ROOT}${path}`, {
+    ...options,
+    headers,
+  });
+
+  let data = {};
+
+  try {
+    data = await response.json();
+  } catch {
+    // Some responses may not contain JSON.
+  }
+
+  if (!response.ok) {
+    throw new Error(data.message || `Request failed (${response.status})`);
+  }
+
+  return data;
+}
+
+/* ===================== GREETING / PROFILE ===================== */
 
 (function setGreeting() {
+  const user = getSavedUser();
   const hour = new Date().getHours();
-  const part = hour < 12 ? "morning" : hour < 18 ? "afternoon" : "evening";
-  document.getElementById("greeting").textContent = `Good ${part}, Daniel`;
+
+  const part =
+    hour < 12 ? "morning" : hour < 18 ? "afternoon" : "evening";
+
+  const firstName = user?.firstName || "User";
+  const lastName = user?.lastName || "";
+  const fullName = [firstName, lastName].filter(Boolean).join(" ");
+
+  const initials = [firstName, lastName]
+    .filter(Boolean)
+    .map((name) => name[0].toUpperCase())
+    .join("");
+
+  const profileName = document.getElementById("profileName");
+  const profileInitials = document.getElementById("profileInitials");
+  const profileRole = document.getElementById("profileRole");
+  const greeting = document.getElementById("greeting");
+
+  if (profileName) profileName.textContent = fullName;
+  if (profileInitials) profileInitials.textContent = initials;
+
+  if (profileRole) {
+    profileRole.textContent =
+      user?.role === "admin" ? "Administrator" : "Regular User";
+  }
+
+  if (greeting) {
+    greeting.textContent = `Good ${part}, ${firstName}`;
+  }
 })();
 
 /* ===================== STATE ===================== */
 
-let reservation = {
-  garage: "Metro Central Garage",
-  address: "420 Market St, San Francisco · Zone B",
-  space: "B-14",
-  starts: "09:00",
-  ends: "14:30",
-  rate: 4.5,
-  status: "confirmed", // confirmed -> arrived
-  endTime: Date.now() + (1 * 60 * 60 * 1000 + 24 * 60 * 1000 + 55 * 1000), // ~01:24:55 from load
-};
+// No fake reservation is assigned automatically.
+let reservation = null;
 
-let vehicles = [
-  { id: 1, label: "Honda Civic · Silver", plate: "7KLM-294", type: "Gas", primary: true },
-  { id: 2, label: "Tesla Model 3", plate: "8RNP-102", type: "EV", primary: false },
-];
+// These remain empty until vehicle/history APIs are connected.
+let vehicles = [];
+let activity = [];
+let notifications = [];
 
-let activity = [
-  { id: 1, place: "Bayview Marina Lot", date: "Oct 28", duration: "3h 15m", hours: 3.25, spot: "Space A-07", price: 14.63 },
-  { id: 2, place: "SFO Terminal 2 Garage", date: "Oct 25", duration: "6h 40m", hours: 6.67, spot: "Space C-22", price: 30.4 },
-  { id: 3, place: "Mission District Street", date: "Oct 22", duration: "1h 50m", hours: 1.83, spot: "Meter 114", price: 6.0 },
-  { id: 4, place: "Metro Central Garage", date: "Oct 18", duration: "5h 05m", hours: 5.08, spot: "Space B-09", price: 22.85 },
-];
-
-let notifications = [
-  { id: 1, text: "Your reservation at Metro Central Garage starts soon.", time: "10m ago" },
-  { id: 2, text: "Receipt available for your Oct 25 session at SFO Terminal 2.", time: "2d ago" },
-];
-
-const TOTAL_SPACES = 48;
 let lot = [];
-(function buildLot() {
-  const yourIndex = 14; // matches "15" label in the wireframe (1-indexed 15th cell)
-  for (let i = 1; i <= TOTAL_SPACES; i++) {
-    let status = "free";
-    if (i - 1 === yourIndex) status = "yours";
-    else if (Math.random() < 0.55) status = "occupied";
-    lot.push({ num: String(i).padStart(2, "0"), status });
-  }
-})();
 
-/* ===================== NAV ===================== */
+/* ===================== NAVIGATION ===================== */
 
 document.querySelectorAll(".navitem").forEach((item) => {
   item.addEventListener("click", () => goTo(item.dataset.section));
 });
+
 function goTo(section) {
-  document.querySelectorAll(".navitem").forEach((i) => i.classList.toggle("active", i.dataset.section === section));
-  document.querySelectorAll("section.page").forEach((p) => p.classList.toggle("active", p.id === `page-${section}`));
+  document.querySelectorAll(".navitem").forEach((item) => {
+    item.classList.toggle("active", item.dataset.section === section);
+  });
+
+  document.querySelectorAll("section.page").forEach((page) => {
+    page.classList.toggle("active", page.id === `page-${section}`);
+  });
 }
 
 /* ===================== TOAST / MODALS ===================== */
 
-function toast(msg) {
-  const t = document.getElementById("toast");
-  t.textContent = msg;
-  t.classList.add("show");
-  clearTimeout(t._timer);
-  t._timer = setTimeout(() => t.classList.remove("show"), 2200);
+function toast(message) {
+  const element = document.getElementById("toast");
+  if (!element) return;
+
+  element.textContent = message;
+  element.classList.add("show");
+
+  clearTimeout(element._timer);
+
+  element._timer = setTimeout(() => {
+    element.classList.remove("show");
+  }, 2500);
 }
+
 function openModal(id) {
-  document.getElementById(id).classList.add("show");
+  document.getElementById(id)?.classList.add("show");
 }
+
 function closeModal(id) {
-  document.getElementById(id).classList.remove("show");
+  document.getElementById(id)?.classList.remove("show");
 }
-document.querySelectorAll(".modal-overlay").forEach((ov) => {
-  ov.addEventListener("click", (e) => {
-    if (e.target === ov) ov.classList.remove("show");
+
+document.querySelectorAll(".modal-overlay").forEach((overlay) => {
+  overlay.addEventListener("click", (event) => {
+    if (event.target === overlay) {
+      overlay.classList.remove("show");
+    }
   });
 });
 
 /* ===================== DROPDOWNS ===================== */
 
 function toggleDropdown(id) {
-  const el = document.getElementById(id);
-  const wasOpen = el.classList.contains("show");
-  document.querySelectorAll(".dropdown").forEach((d) => d.classList.remove("show"));
+  const element = document.getElementById(id);
+  if (!element) return;
+
+  const wasOpen = element.classList.contains("show");
+
+  document.querySelectorAll(".dropdown").forEach((dropdown) => {
+    dropdown.classList.remove("show");
+  });
+
   if (!wasOpen) {
-    el.classList.add("show");
+    element.classList.add("show");
+
     if (id === "bellDropdown") {
-      document.getElementById("bellDot").style.display = "none";
+      const dot = document.getElementById("bellDot");
+      if (dot) dot.style.display = "none";
+
       renderBell();
     }
   }
 }
-document.addEventListener("click", (e) => {
-  if (!e.target.closest(".bell") && !e.target.closest(".user-chip") && !e.target.closest(".dropdown")) {
-    document.querySelectorAll(".dropdown").forEach((d) => d.classList.remove("show"));
+
+document.addEventListener("click", (event) => {
+  if (
+    !event.target.closest(".bell") &&
+    !event.target.closest(".user-chip") &&
+    !event.target.closest(".dropdown")
+  ) {
+    document.querySelectorAll(".dropdown").forEach((dropdown) => {
+      dropdown.classList.remove("show");
+    });
   }
 });
+
 function renderBell() {
-  const el = document.getElementById("bellDropdown");
-  el.innerHTML = notifications.length
-    ? notifications.map((n) => `<div class="ddi"><b style="font-weight:600;">${n.text}</b><br><span style="color:var(--faint);font-size:11.5px;">${n.time}</span></div>`).join("")
+  const element = document.getElementById("bellDropdown");
+  if (!element) return;
+
+  element.innerHTML = notifications.length
+    ? notifications
+        .map(
+          (notification) => `
+            <div class="ddi">
+              <b style="font-weight:600;">${notification.text}</b>
+              <br>
+              <span style="color:var(--faint);font-size:11.5px;">
+                ${notification.time}
+              </span>
+            </div>
+          `
+        )
+        .join("")
     : `<div class="ddi muted">No new notifications.</div>`;
 }
 
-/* ===================== COUNTDOWN ===================== */
+/* ===================== RESERVATION CARD ===================== */
 
-function formatRemaining(ms) {
-  if (ms <= 0) return "00:00:00";
-  const totalSec = Math.floor(ms / 1000);
-  const h = String(Math.floor(totalSec / 3600)).padStart(2, "0");
-  const m = String(Math.floor((totalSec % 3600) / 60)).padStart(2, "0");
-  const s = String(totalSec % 60).padStart(2, "0");
-  return `${h}:${m}:${s}`;
-}
-function tickCountdown() {
-  const remaining = reservation.endTime - Date.now();
-  document.getElementById("timeRemaining").textContent = formatRemaining(remaining);
-  if (remaining <= 0) {
-    document.getElementById("timeRemaining").textContent = "Expired";
+function findReservationCard() {
+  const statusPill = document.getElementById("resStatusPill");
+
+  if (statusPill) {
+    let element = statusPill;
+
+    while (element && element !== document.body) {
+      if (
+        element.classList?.contains("card") ||
+        element.classList?.contains("reservation-card") ||
+        element.classList?.contains("panel")
+      ) {
+        return element;
+      }
+
+      element = element.parentElement;
+    }
   }
-}
-setInterval(tickCountdown, 1000);
 
-function extendReservation() {
-  reservation.endTime += 30 * 60 * 1000; // +30 min
-  const endDate = new Date(reservation.endTime);
-  reservation.ends = endDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
-  document.getElementById("resEnds").textContent = reservation.ends;
-  toast("Reservation extended by 30 minutes.");
-  tickCountdown();
-}
+  // Fallback: locate the "ACTIVE RESERVATION" heading and move upward.
+  const heading = [...document.querySelectorAll("*")].find(
+    (element) =>
+      element.children.length === 0 &&
+      element.textContent.trim().toUpperCase() === "ACTIVE RESERVATION"
+  );
 
-function confirmArrival() {
-  if (reservation.status === "arrived") return;
-  reservation.status = "arrived";
-  const pill = document.getElementById("resStatusPill");
-  pill.innerHTML = `<span class="dot"></span> Arrived`;
-  const btn = document.getElementById("confirmArrivalBtn");
-  btn.disabled = true;
-  btn.textContent = "Arrival confirmed";
-  toast("Arrival confirmed — enjoy your stay!");
+  if (!heading) return null;
+
+  let element = heading;
+
+  for (let i = 0; i < 6 && element; i++) {
+    if (element.contains(statusPill)) return element;
+    element = element.parentElement;
+  }
+
+  return heading.parentElement?.parentElement || null;
 }
 
-/* ===================== LIVE MAP ===================== */
+function updateReservationCard() {
+  const card = findReservationCard();
+  const arrivalButton = document.getElementById("confirmArrivalBtn");
 
-function renderLot() {
-  const grid = document.getElementById("lotGrid");
-  const free = lot.filter((c) => c.status === "free").length;
-  document.getElementById("mapSummary").textContent = `${reservation.garage} · ${free} of ${TOTAL_SPACES} spaces free`;
-  document.getElementById("yourSpaceLabel").textContent = reservation.space;
-  grid.innerHTML = lot
-    .map(
-      (c) =>
-        `<div class="space-cell ${c.status}" onclick="clickSpace('${c.num}','${c.status}')">${c.status === "yours" ? "" : c.num}</div>`
-    )
-    .join("");
-}
+  // Regular users must not confirm their own arrival.
+  if (arrivalButton) {
+    arrivalButton.style.display = "none";
+  }
 
-function clickSpace(num, status) {
-  if (status === "occupied") return;
-  if (status === "yours") {
-    toast(`Space ${reservation.space} is your active reservation.`);
+  if (!reservation) {
+    if (card) card.style.display = "none";
     return;
   }
-  document.getElementById("spaceModalTitle").textContent = `Space ${num}`;
-  document.getElementById("spaceModalSub").textContent = `${reservation.garage} · Lot A, Section B — Available now`;
-  document.getElementById("spaceModal").dataset.space = num;
+
+  if (card) card.style.display = "";
+
+  const statusPill = document.getElementById("resStatusPill");
+  if (statusPill) {
+    const statusLabels = {
+      pending: "Pending approval",
+      approved: "Approved",
+      arrived: "Arrived",
+    };
+
+    statusPill.innerHTML =
+      `<span class="dot"></span> ${statusLabels[reservation.status] || reservation.status}`;
+  }
+
+  const spaceElement = document.getElementById("resSpace");
+  if (spaceElement) {
+    spaceElement.textContent = reservation.spaceNumber;
+  }
+
+  const yourSpaceLabel = document.getElementById("yourSpaceLabel");
+  if (yourSpaceLabel) {
+    yourSpaceLabel.textContent = reservation.spaceNumber;
+  }
+
+  const timeRemaining = document.getElementById("timeRemaining");
+  if (timeRemaining) {
+    timeRemaining.textContent =
+      reservation.status === "pending"
+        ? "Waiting for admin approval"
+        : reservation.status === "approved"
+          ? "Approved — waiting for arrival"
+          : "Arrival confirmed";
+  }
+}
+
+async function loadActiveReservation() {
+  try {
+    const data = await apiRequest("/api/reservations/active");
+    reservation = data.reservation || null;
+
+    updateReservationCard();
+    renderLot();
+  } catch (error) {
+    console.error("Could not load active reservation:", error);
+  }
+}
+
+// User-side arrival confirmation is intentionally removed.
+// Only the admin can confirm arrival through the admin endpoint.
+
+/* ===================== LIVE PARKING MAP ===================== */
+
+async function renderLot() {
+  const grid = document.getElementById("lotGrid");
+  const summary = document.getElementById("mapSummary");
+
+  if (!grid || !summary) return;
+
+  try {
+    const spaces = await apiRequest("/api/parking-spaces");
+    lot = Array.isArray(spaces) ? spaces : [];
+
+    // Mark the current user's own active space on the map.
+    if (reservation) {
+      lot = lot.map((space) => {
+        if (
+          String(space.spaceNumber) === String(reservation.spaceNumber)
+        ) {
+          return { ...space, status: "yours" };
+        }
+
+        return space;
+      });
+    }
+
+    const freeCount = lot.filter(
+      (space) => space.status === "available"
+    ).length;
+
+    summary.textContent =
+      `Parking Lot · ${freeCount} of ${lot.length || TOTAL_SPACES} spaces free`;
+
+    grid.innerHTML = lot
+      .map((space) => {
+        let cssStatus = "occupied";
+
+        if (space.status === "available") {
+          cssStatus = "free";
+        } else if (space.status === "yours") {
+          cssStatus = "yours";
+        }
+
+        const displayNumber = String(space.spaceNumber).padStart(2, "0");
+
+        return `
+          <div
+            class="space-cell ${cssStatus}"
+            onclick="clickSpace('${displayNumber}', '${space.status}', ${space.id})"
+            title="Space ${displayNumber}: ${space.status}"
+          >
+            ${space.status === "yours" ? "" : displayNumber}
+          </div>
+        `;
+      })
+      .join("");
+  } catch (error) {
+    console.error("Could not load parking spaces:", error);
+    summary.textContent = "Unable to load parking spaces.";
+    grid.innerHTML = "";
+  }
+}
+
+function clickSpace(spaceNumber, status, spaceId) {
+  if (status === "yours") {
+    toast(`Space ${spaceNumber} is your active reservation.`);
+    return;
+  }
+
+  if (status !== "available") {
+    toast(`Space ${spaceNumber} is not available.`);
+    return;
+  }
+
+  if (reservation) {
+    toast("You already have an active reservation request.");
+    return;
+  }
+
+  const title = document.getElementById("spaceModalTitle");
+  const subtitle = document.getElementById("spaceModalSub");
+  const modal = document.getElementById("spaceModal");
+
+  if (title) title.textContent = `Space ${spaceNumber}`;
+
+  if (subtitle) {
+    subtitle.textContent = "Parking Lot · Available now";
+  }
+
+  if (modal) {
+    modal.dataset.space = spaceNumber;
+    modal.dataset.spaceId = spaceId;
+  }
+
   openModal("spaceModal");
 }
-function reserveFromMap() {
-  const num = document.getElementById("spaceModal").dataset.space;
-  toast(`Reservation request sent for space ${num}.`);
-  closeModal("spaceModal");
+
+/* ===================== SEND RESERVATION REQUEST ===================== */
+
+async function reserveFromMap() {
+  const modal = document.getElementById("spaceModal");
+  const spaceId = Number(modal?.dataset.spaceId);
+  const spaceNumber = modal?.dataset.space;
+
+  if (!spaceId) {
+    toast("Please select a parking space first.");
+    return;
+  }
+
+  if (reservation) {
+    toast("You already have an active reservation request.");
+    closeModal("spaceModal");
+    return;
+  }
+
+  try {
+    const result = await apiRequest("/api/reservations", {
+      method: "POST",
+      body: JSON.stringify({ spaceId }),
+    });
+
+    toast(result.message || `Request sent for space ${spaceNumber}.`);
+    closeModal("spaceModal");
+
+    await loadActiveReservation();
+    await renderLot();
+  } catch (error) {
+    console.error("Reservation request failed:", error);
+    toast(error.message || "Could not send reservation request.");
+  }
 }
 
 /* ===================== VEHICLES ===================== */
 
-function vehicleIcon(v) {
-  return v.type === "EV" ? "🔋" : "🚗";
+// Vehicle storage/API connection has not been added yet.
+// Do not show fake vehicles for every account.
+
+function vehicleIcon(vehicle) {
+  return vehicle.type === "EV" ? "🔋" : "🚗";
 }
 
 function renderVehicles() {
-  const primary = vehicles.find((v) => v.primary) || vehicles[0];
-  const others = vehicles.filter((v) => v !== primary);
+  const primaryBox = document.getElementById("primaryVehicleBox");
+  const otherBox = document.getElementById("otherVehiclesBox");
+  const allList = document.getElementById("allVehiclesList");
 
-  document.getElementById("primaryVehicleBox").innerHTML = primary
-    ? `<div class="vehicle-row">
-        <div class="vehicle-ic">${vehicleIcon(primary)}</div>
-        <div><b>${primary.label}</b><span>Plate ${primary.plate}</span></div>
-      </div>`
-    : `<p style="color:var(--faint);font-size:13px;">No primary vehicle yet.</p>`;
+  const primary = vehicles.find((vehicle) => vehicle.primary) || vehicles[0];
+  const others = vehicles.filter((vehicle) => vehicle !== primary);
 
-  document.getElementById("otherVehiclesBox").innerHTML = others
-    .map(
-      (v) => `<div class="vehicle-row">
-        <div class="vehicle-ic">${vehicleIcon(v)}</div>
-        <div><b>${v.label}</b><span>${v.type} · ${v.plate}</span></div>
-        <button class="rm" onclick="removeVehicle(${v.id})">Remove</button>
-      </div>`
-    )
-    .join("");
+  if (primaryBox) {
+    primaryBox.innerHTML = primary
+      ? `
+        <div class="vehicle-row">
+          <div class="vehicle-ic">${vehicleIcon(primary)}</div>
+          <div>
+            <b>${primary.label}</b>
+            <span>Plate ${primary.plate}</span>
+          </div>
+        </div>
+      `
+      : `<p style="color:var(--faint);font-size:13px;">No vehicle added yet.</p>`;
+  }
 
-  document.getElementById("allVehiclesList").innerHTML = vehicles
-    .map(
-      (v) => `<div class="vehicle-row">
-        <div class="vehicle-ic">${vehicleIcon(v)}</div>
-        <div><b>${v.label}${v.primary ? " (Primary)" : ""}</b><span>${v.type} · Plate ${v.plate}</span></div>
-        ${v.primary ? "" : `<button class="rm" onclick="setPrimary(${v.id})" style="margin-left:auto;margin-right:10px;">Set primary</button>`}
-        <button class="rm" onclick="removeVehicle(${v.id})">Remove</button>
-      </div>`
-    )
-    .join("");
+  if (otherBox) {
+    otherBox.innerHTML = others
+      .map(
+        (vehicle) => `
+          <div class="vehicle-row">
+            <div class="vehicle-ic">${vehicleIcon(vehicle)}</div>
+            <div>
+              <b>${vehicle.label}</b>
+              <span>${vehicle.type} · ${vehicle.plate}</span>
+            </div>
+            <button class="rm" onclick="removeVehicle(${vehicle.id})">
+              Remove
+            </button>
+          </div>
+        `
+      )
+      .join("");
+  }
+
+  if (allList) {
+    allList.innerHTML = vehicles.length
+      ? vehicles
+          .map(
+            (vehicle) => `
+              <div class="vehicle-row">
+                <div class="vehicle-ic">${vehicleIcon(vehicle)}</div>
+                <div>
+                  <b>${vehicle.label}${vehicle.primary ? " (Primary)" : ""}</b>
+                  <span>${vehicle.type} · Plate ${vehicle.plate}</span>
+                </div>
+                ${
+                  vehicle.primary
+                    ? ""
+                    : `<button class="rm" onclick="setPrimary(${vehicle.id})">Set primary</button>`
+                }
+                <button class="rm" onclick="removeVehicle(${vehicle.id})">
+                  Remove
+                </button>
+              </div>
+            `
+          )
+          .join("")
+      : `<p style="color:var(--faint);font-size:13px;">No vehicles added yet.</p>`;
+  }
 }
+
 function removeVehicle(id) {
-  const v = vehicles.find((x) => x.id === id);
-  if (!v) return;
-  if (!confirm(`Remove ${v.label}?`)) return;
-  vehicles = vehicles.filter((x) => x.id !== id);
-  if (v.primary && vehicles.length) vehicles[0].primary = true;
-  toast(`${v.label} removed.`);
+  const vehicle = vehicles.find((item) => item.id === id);
+  if (!vehicle) return;
+
+  if (!confirm(`Remove ${vehicle.label}?`)) return;
+
+  vehicles = vehicles.filter((item) => item.id !== id);
+
+  if (vehicle.primary && vehicles.length) {
+    vehicles[0].primary = true;
+  }
+
   renderVehicles();
+  toast(`${vehicle.label} removed from this page.`);
 }
+
 function setPrimary(id) {
-  vehicles.forEach((v) => (v.primary = v.id === id));
+  vehicles.forEach((vehicle) => {
+    vehicle.primary = vehicle.id === id;
+  });
+
   renderVehicles();
-  toast("Primary vehicle updated.");
+  toast("Primary vehicle updated on this page.");
 }
+
 function submitVehicle() {
-  const makeModel = document.getElementById("vMakeModel").value.trim();
-  const plate = document.getElementById("vPlate").value.trim();
-  const type = document.getElementById("vType").value;
+  const makeModel = document.getElementById("vMakeModel")?.value.trim();
+  const plate = document.getElementById("vPlate")?.value.trim();
+  const type = document.getElementById("vType")?.value;
+
   if (!makeModel || !plate) {
     toast("Enter a make/model and plate.");
     return;
   }
-  vehicles.push({ id: Date.now(), label: makeModel, plate, type, primary: vehicles.length === 0 });
+
+  vehicles.push({
+    id: Date.now(),
+    label: makeModel,
+    plate,
+    type: type || "Gas",
+    primary: vehicles.length === 0,
+  });
+
   document.getElementById("vMakeModel").value = "";
   document.getElementById("vPlate").value = "";
-  toast(`${makeModel} added.`);
+
   closeModal("vehicleModal");
   renderVehicles();
+  toast(`${makeModel} added for this page.`);
 }
 
 /* ===================== ACTIVITY / HISTORY / STATS ===================== */
 
+// Demo history has been removed until real history is connected.
+
 function renderActivity() {
   const list = document.getElementById("recentActivityList");
-  list.innerHTML = activity
-    .slice(0, 3)
-    .map(
-      (a) => `<div class="activity-row">
-        <div class="activity-check">✓</div>
-        <div><b>${a.place}</b><span>${a.date} · ${a.duration} · ${a.spot}</span></div>
-        <div class="activity-price">$${a.price.toFixed(2)}</div>
-      </div>`
-    )
-    .join("");
-
   const body = document.getElementById("historyTableBody");
-  body.innerHTML = activity
-    .map(
-      (a) => `<tr>
-        <td>${a.place}</td><td>${a.date}</td><td>${a.duration}</td><td>${a.spot}</td><td>$${a.price.toFixed(2)}</td>
-      </tr>`
-    )
-    .join("");
+
+  if (list) {
+    list.innerHTML = activity.length
+      ? activity
+          .slice(0, 3)
+          .map(
+            (item) => `
+              <div class="activity-row">
+                <div class="activity-check">✓</div>
+                <div>
+                  <b>${item.place}</b>
+                  <span>${item.date} · ${item.duration} · ${item.spot}</span>
+                </div>
+                <div class="activity-price">$${item.price.toFixed(2)}</div>
+              </div>
+            `
+          )
+          .join("")
+      : `<p style="color:var(--faint);font-size:13px;">No parking activity yet.</p>`;
+  }
+
+  if (body) {
+    body.innerHTML = activity
+      .map(
+        (item) => `
+          <tr>
+            <td>${item.place}</td>
+            <td>${item.date}</td>
+            <td>${item.duration}</td>
+            <td>${item.spot}</td>
+            <td>$${item.price.toFixed(2)}</td>
+          </tr>
+        `
+      )
+      .join("");
+  }
 }
 
 function renderStats() {
   const sessions = activity.length;
-  const hours = activity.reduce((s, a) => s + a.hours, 0);
-  const spent = activity.reduce((s, a) => s + a.price, 0);
-  const avg = sessions ? spent / sessions : 0;
-  document.getElementById("statSessions").textContent = sessions;
-  document.getElementById("statHours").textContent = hours.toFixed(1);
-  document.getElementById("statSpent").textContent = "$" + spent.toFixed(2);
-  document.getElementById("statAvg").textContent = "$" + avg.toFixed(2);
+  const hours = activity.reduce((sum, item) => sum + item.hours, 0);
+  const spent = activity.reduce((sum, item) => sum + item.price, 0);
+  const average = sessions ? spent / sessions : 0;
+
+  const values = {
+    statSessions: sessions,
+    statHours: hours.toFixed(1),
+    statSpent: "$" + spent.toFixed(2),
+    statAvg: "$" + average.toFixed(2),
+  };
+
+  Object.entries(values).forEach(([id, value]) => {
+    const element = document.getElementById(id);
+    if (element) element.textContent = value;
+  });
 }
 
 /* ===================== SETTINGS ===================== */
 
 function saveSettings() {
-  const name = document.getElementById("setName").value.trim();
+  const name = document.getElementById("setName")?.value.trim();
+
   if (name) {
-    document.querySelector(".user-chip .name").textContent = name;
-    document.getElementById("greeting").textContent = document.getElementById("greeting").textContent.replace(/,\s*\w+$/, ", " + name.split(" ")[0]);
+    const nameElement = document.querySelector(".user-chip .name");
+    if (nameElement) nameElement.textContent = name;
+
+    const greeting = document.getElementById("greeting");
+    if (greeting) {
+      greeting.textContent = greeting.textContent.replace(
+        /,\s*.+$/,
+        ", " + name.split(" ")[0]
+      );
+    }
   }
-  toast("Settings saved.");
+
+  toast("Settings updated on this page.");
 }
 
 /* ===================== SUPPORT ===================== */
 
 function submitSupport() {
-  const msg = document.getElementById("supportMsg").value.trim();
-  if (!msg) {
+  const input = document.getElementById("supportMsg");
+  const message = input?.value.trim();
+
+  if (!message) {
     toast("Type a message first.");
     return;
   }
-  document.getElementById("supportMsg").value = "";
+
+  input.value = "";
   closeModal("supportModal");
-  toast("Support request sent — we'll follow up by email.");
+  toast("Support form is not connected to the backend yet.");
 }
 
-/* ===================== INIT ===================== */
+/* INITIALIZE */
 
-renderLot();
-renderVehicles();
-renderActivity();
-renderStats();
-renderBell();
-tickCountdown();
+async function initializeDashboard() {
+  // Remove the regular user's arrival confirmation button.
+  const arrivalButton = document.getElementById("confirmArrivalBtn");
+
+  if (arrivalButton) {
+    arrivalButton.style.display = "none";
+  }
+
+  renderVehicles();
+  renderActivity();
+  renderStats();
+  renderBell();
+
+  await loadActiveReservation();
+  await renderLot();
+}
+
+initializeDashboard();

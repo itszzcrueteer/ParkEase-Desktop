@@ -1,98 +1,59 @@
-/* ===================== STATE ===================== */
+/*  STATE  */
 
 let systemActive = true;
 let idCounter = 1000;
 
 // Build parking spaces: Section A (32, full), Section B (24, 18 available),
 // Section C (36), Section D (36) — total 128, occupancy target ~74% (95/128)
-const SECTIONS = { A: 32, B: 24, C: 36, D: 36 };
+const SECTIONS = { A: 12, B: 12, C: 12, D: 12 };
 let spaces = [];
+
 (function buildSpaces() {
-  Object.entries(SECTIONS).forEach(([sec, count]) => {
+  let spaceNumber = 1;
+
+  Object.entries(SECTIONS).forEach(([section, count]) => {
     for (let i = 1; i <= count; i++) {
-      spaces.push({ id: `${sec}-${String(i).padStart(2, "0")}`, section: sec, status: "available" });
+      spaces.push({
+        id: String(spaceNumber).padStart(2, "0"),
+        section,
+        status: "available"
+      });
+
+      spaceNumber++;
     }
   });
-  // Section A: fill completely
-  spaces.filter((s) => s.section === "A").forEach((s) => (s.status = "occupied"));
-  // Section B: 18 available / 24 -> occupy 6
-  spaces.filter((s) => s.section === "B").slice(0, 6).forEach((s) => (s.status = "occupied"));
-  // Fill remaining sections until total occupied+reserved ~ 95, leaving a few reserved
-  let occupiedCount = spaces.filter((s) => s.status !== "available").length;
-  const targetOccupied = 95;
-  const remaining = spaces.filter((s) => s.section === "C" || s.section === "D");
-  let idx = 0;
-  while (occupiedCount < targetOccupied - 3 && idx < remaining.length) {
-    remaining[idx].status = "occupied";
-    occupiedCount++;
-    idx++;
-  }
-  // A few reserved (awaiting arrival) spaces
-  for (let i = 0; i < 3 && idx < remaining.length; i++, idx++) {
-    remaining[idx].status = "reserved";
-  }
-  // Make sure B-14, A-08, C-22, D-02, B-05 exist and match seed reservations below
 })();
 
 function findSpace(id) {
   return spaces.find((s) => s.id === id);
 }
 
-let reservations = [
-  { id: idCounter++, user: "Alex Rivera", space: "B-14", time: "14:02", left: "04:12 left", status: "awaiting" },
-  { id: idCounter++, user: "Jordan Lee", space: "A-08", time: "13:45", left: "", status: "confirmed" },
-  { id: idCounter++, user: "Sam Chen", space: "C-22", time: "13:10", left: "", status: "confirmed" },
-  { id: idCounter++, user: "Priya Nair", space: "D-11", time: "12:55", left: "", status: "confirmed" },
-  { id: idCounter++, user: "Mark S.", space: "D-02", time: "11:30", left: "", status: "expired" },
-  { id: idCounter++, user: "Lena Cruz", space: "C-04", time: "10:15", left: "", status: "cancelled" },
-];
-// keep referenced spaces consistent with statuses above
-["B-14"].forEach((id) => (findSpace(id).status = "reserved"));
-["A-08", "C-22", "D-11"].forEach((id) => (findSpace(id).status = "occupied"));
-if (findSpace("D-02")) findSpace("D-02").status = "available";
-if (findSpace("C-04")) findSpace("C-04").status = "available";
-if (findSpace("B-05")) findSpace("B-05").status = "available";
+// Reservations will be loaded from the backend
+let reservations = [];
 
-let users = [
-  { id: idCounter++, name: "Alex Rivera", role: "Driver", vehicle: "Honda Civic", flags: 0 },
-  { id: idCounter++, name: "Jordan Lee", role: "Driver", vehicle: "Mazda 3", flags: 0 },
-  { id: idCounter++, name: "Sam Chen", role: "Driver", vehicle: "Ford Focus", flags: 0 },
-  { id: idCounter++, name: "Mark S.", role: "Driver", vehicle: "VW Golf", flags: 0 },
-  { id: idCounter++, name: "Sarah", role: "Attendant", vehicle: "—", flags: 0 },
-  { id: idCounter++, name: "Admin User", role: "Admin", vehicle: "—", flags: 0 },
-];
+// Users will be loaded from the backend
+let users = [];
 
-let alerts = [
-  {
-    id: idCounter++,
-    type: "warning",
-    title: "Reservation Expired",
-    text: "User 'Mark S.' failed to confirm Space D-02 within 5 mins.",
-    time: "just now",
-  },
-  {
-    id: idCounter++,
-    type: "info",
-    title: "Manual Release",
-    text: "Space B-05 released by attendant 'Sarah'.",
-    time: "2 mins ago",
-  },
-];
+// Alerts will be loaded from the backend
+let alerts = [];
 
-let history = [
-  { time: "13:58", event: "Space B-05 released by attendant Sarah." },
-  { time: "13:45", event: "Reservation confirmed for Jordan Lee — Space A-08." },
-  { time: "13:10", event: "Reservation confirmed for Sam Chen — Space C-22." },
-];
+// History will be loaded from the backend
+let history = [];
 
 function addHistory(text) {
   const now = new Date();
-  const time = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  const time = now.toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+
   history.unshift({ time, event: text });
   renderHistoryTable();
 }
 
-/* ===================== NAV ===================== */
+
+
+/*  NAV  */
 
 document.querySelectorAll(".navitem").forEach((item) => {
   item.addEventListener("click", () => goTo(item.dataset.section));
@@ -103,7 +64,7 @@ function goTo(section) {
   document.querySelectorAll("section.page").forEach((p) => p.classList.toggle("active", p.id === `page-${section}`));
 }
 
-/* ===================== TOAST ===================== */
+/*  TOAST */
 
 function toast(msg) {
   const t = document.getElementById("toast");
@@ -113,7 +74,7 @@ function toast(msg) {
   t._timer = setTimeout(() => t.classList.remove("show"), 2200);
 }
 
-/* ===================== SYSTEM TOGGLE ===================== */
+/*  SYSTEM TOGGLE  */
 
 function toggleSystem() {
   systemActive = !systemActive;
@@ -124,7 +85,7 @@ function toggleSystem() {
   addHistory(`System status changed to ${systemActive ? "Active" : "Paused"} by Admin User.`);
 }
 
-/* ===================== RENDER: STATS ===================== */
+/*  RENDER: STATS */
 
 function renderStats() {
   const total = spaces.length;
@@ -147,7 +108,7 @@ function renderStats() {
   document.getElementById("statFlags").textContent = String(totalFlags).padStart(2, "0");
 }
 
-/* ===================== RENDER: RESERVATIONS TABLES ===================== */
+/*  RENDER: RESERVATIONS TABLES  */
 
 function statusLabel(status) {
   return { confirmed: "Confirmed", awaiting: "Awaiting Arrival", expired: "Expired", cancelled: "Cancelled" }[status] || status;
@@ -157,11 +118,19 @@ function statusClass(status) {
 }
 
 function reservationRowHTML(r) {
-  const initials = r.user.split(" ").map((p) => p[0]).slice(0, 2).join("").toUpperCase();
-  const releaseBtn = r.status === "confirmed" || r.status === "awaiting"
+  const initials = r.user
+    .split(" ")
+    .map((p) => p[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+
+  const releaseBtn = r.status === "arrived"
     ? `<button class="link-action" onclick="releaseReservation(${r.id})">Release</button>`
     : `<span style="color:var(--faint);font-size:12.5px;">—</span>`;
+
   const manageBtn = `<button class="link-action" style="margin-left:10px;" onclick="openManage(${r.id})">Manage</button>`;
+
   return `<tr>
     <td><div class="userrow"><div class="avatar">${initials}</div> ${r.user}</div></td>
     <td>${r.space}</td>
@@ -171,21 +140,115 @@ function reservationRowHTML(r) {
   </tr>`;
 }
 
+async function loadUsersFromBackend() {
+  const token =
+    localStorage.getItem("parkease_token") ||
+    sessionStorage.getItem("parkease_token");
+
+  if (!token) {
+    toast("Please log in again.");
+    return;
+  }
+
+  try {
+    const response = await fetch(
+      "http://localhost:5001/api/admin/users",
+      {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || "Unable to load users.");
+    }
+
+    const data = await response.json();
+
+    users = data.map((user) => ({
+      id: user.id,
+      name: `${user.firstName} ${user.lastName}`,
+      role: user.role === "admin" ? "Admin" : "Driver",
+      vehicle: user.vehicle || "—",
+      flags: 0
+    }));
+
+    renderUsersTable();
+  } catch (error) {
+    console.error("Failed to load users:", error);
+    toast(error.message || "Failed to load users.");
+  }
+}
+
 function renderOverviewTable() {
   const filter = document.getElementById("overviewStatusFilter").value;
-  let rows = reservations.filter((r) => r.status === "confirmed" || r.status === "awaiting");
-  if (filter !== "all") rows = rows.filter((r) => r.status === filter);
+
+  let rows = reservations.filter(
+    (r) =>
+      r.status === "confirmed" ||
+      r.status === "awaiting" ||
+      r.status === "arrived"
+  );
+
+  if (filter !== "all") {
+    rows = rows.filter((r) => r.status === filter);
+  }
+
   const body = document.getElementById("overviewTableBody");
+
   body.innerHTML = rows.length
     ? rows.map(reservationRowHTML).join("")
     : `<tr><td colspan="5" class="empty">No active reservations.</td></tr>`;
+}
+
+
+async function loadReservationsFromBackend() {
+  const token =
+    localStorage.getItem("parkease_token") ||
+    sessionStorage.getItem("parkease_token");
+
+  if (!token) {
+    toast("Please log in again.");
+    return;
+  }
+
+  try {
+    const response = await fetch(
+      "http://localhost:5001/api/admin/reservations/active",
+      {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("Unable to load pending reservations.");
+    }
+
+    reservations = await response.json();
+
+    renderReservationsTable();
+    renderOverviewTable();
+  } catch (error) {
+    console.error(error);
+    toast(error.message);
+  }
 }
 
 function renderReservationsTable() {
   const search = document.getElementById("resSearch").value.trim().toLowerCase();
   const filter = document.getElementById("resStatusFilter").value;
   let rows = reservations.slice();
-  if (filter !== "all") rows = rows.filter((r) => r.status === filter);
+  if (filter !== "all") {
+  rows = rows.filter((r) =>
+    r.status === filter ||
+    (filter === "pending" && r.status === "awaiting") ||
+    (filter === "awaiting" && r.status === "pending")
+  );
+}
   if (search) rows = rows.filter((r) => r.user.toLowerCase().includes(search) || r.space.toLowerCase().includes(search));
   const body = document.getElementById("reservationsTableBody");
   body.innerHTML = rows.length
@@ -193,18 +256,59 @@ function renderReservationsTable() {
     : `<tr><td colspan="5" class="empty">No reservations match.</td></tr>`;
 }
 
-function releaseReservation(id) {
+async function releaseReservation(id) {
   const r = reservations.find((x) => x.id === id);
   if (!r) return;
-  const sp = findSpace(r.space);
-  if (sp) sp.status = "available";
-  r.status = "cancelled";
-  addHistory(`Space ${r.space} released — reservation for ${r.user} ended.`);
-  toast(`Space ${r.space} released.`);
-  renderAll();
+
+  const token =
+    localStorage.getItem("parkease_token") ||
+    sessionStorage.getItem("parkease_token");
+
+  if (!token) {
+    toast("Please log in again.");
+    return;
+  }
+
+  try {
+    const response = await fetch(
+      `http://localhost:5001/api/admin/reservations/${id}/complete`,
+      {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || "Unable to release this space.");
+    }
+
+    const sp = findSpace(r.space);
+    if (sp) sp.status = "available";
+
+    r.status = "completed";
+
+    addHistory(
+      `Space ${r.space} released — reservation for ${r.user} ended.`
+    );
+
+    toast(`Space ${r.space} released.`);
+
+    renderAll();
+    await loadParkingSpaces();
+    await loadUsersFromBackend();
+    await loadReservationsFromBackend();
+
+  } catch (error) {
+    console.error(error);
+    toast(error.message);
+  }
 }
 
-/* ===================== MANAGE MODAL ===================== */
+/*  MANAGE MODAL  */
 
 let manageTargetId = null;
 function openManage(id) {
@@ -216,24 +320,69 @@ function openManage(id) {
   document.getElementById("mgStatus").value = r.status;
   openModal("manageModal");
 }
-function saveManage() {
-  const r = reservations.find((x) => x.id === manageTargetId);
-  if (!r) return;
-  const newStatus = document.getElementById("mgStatus").value;
-  const sp = findSpace(r.space);
-  if (sp) {
-    if (newStatus === "confirmed") sp.status = "occupied";
-    else if (newStatus === "awaiting") sp.status = "reserved";
-    else sp.status = "available";
+async function saveManage() {
+  const reservation = reservations.find(
+    (r) => r.id === manageTargetId
+  );
+
+  if (!reservation) {
+    toast("Reservation not found.");
+    return;
   }
-  r.status = newStatus;
-  addHistory(`Reservation for ${r.user} (Space ${r.space}) updated to ${statusLabel(newStatus)}.`);
-  toast("Reservation updated.");
-  closeModal("manageModal");
-  renderAll();
+
+  const newStatus = document.getElementById("mgStatus").value;
+
+  const token =
+    localStorage.getItem("parkease_token") ||
+    sessionStorage.getItem("parkease_token");
+
+  if (!token) {
+    toast("Please log in again.");
+    return;
+  }
+
+  let action = "";
+
+  if (newStatus === "confirmed") {
+    action = "approve";
+  } else if (newStatus === "arrived") {
+    action = "arrive";
+  } else if (newStatus === "rejected") {
+    action = "reject";
+  } else {
+    toast("Invalid reservation status.");
+    return;
+  }
+
+  try {
+    const response = await fetch(
+      `http://localhost:5001/api/admin/reservations/${reservation.id}/${action}`,
+      {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || "Unable to update reservation.");
+    }
+
+    toast("Reservation updated successfully.");
+    closeModal("manageModal");
+
+    await loadReservationsFromBackend();
+    await loadParkingSpaces();
+  } catch (error) {
+    console.error(error);
+    toast(error.message);
+  }
 }
 
-/* ===================== MANUAL ENTRY MODAL ===================== */
+/*  MANUAL ENTRY MODAL  */
 
 function openManualEntry() {
   const select = document.getElementById("meSpace");
@@ -263,7 +412,7 @@ function submitManualEntry() {
   renderAll();
 }
 
-/* ===================== ALERTS ===================== */
+/*  ALERTS  */
 
 function renderAlerts() {
   const list = document.getElementById("alertsList");
@@ -311,7 +460,7 @@ function flagFromAlert(id) {
   renderAll();
 }
 
-/* ===================== SPACE MANAGEMENT SUMMARY ===================== */
+/* SPACE MANAGEMENT SUMMARY  */
 
 function renderSpaceMgmt() {
   const list = document.getElementById("spaceMgmtList");
@@ -326,20 +475,69 @@ function renderSpaceMgmt() {
     .join("");
 }
 
-/* ===================== LIVE MAP ===================== */
+/*  LIVE MAP  */
+
+/*  LIVE MAP  */
+
+async function loadParkingSpaces() {
+  try {
+    const response = await fetch(
+      "http://localhost:5001/api/parking-spaces"
+    );
+
+    if (!response.ok) {
+      throw new Error("Failed to load parking spaces");
+    }
+
+    const data = await response.json();
+
+    data.forEach((backendSpace) => {
+      const space = spaces.find(
+        (s) =>
+          s.id === String(backendSpace.spaceNumber).padStart(2, "0")
+      );
+
+      if (space) {
+        space.status = backendSpace.status;
+      }
+    });
+
+    renderAll();
+  } catch (error) {
+    console.error("Error loading parking spaces:", error);
+  }
+}
 
 function renderMap() {
   const container = document.getElementById("mapSections");
+
   container.innerHTML = Object.keys(SECTIONS)
     .map((sec) => {
       const secSpaces = spaces.filter((s) => s.section === sec);
+
       const cells = secSpaces
-        .map(
-          (s) =>
-            `<div class="space-cell ${s.status}" title="${s.id} — ${s.status}" onclick="clickSpace('${s.id}')">${s.id.split("-")[1]}</div>`
-        )
+        .map((s) => {
+          const displayStatus =
+            s.status === "pending" ? "reserved" : s.status;
+
+          return `
+            <div
+              class="space-cell ${displayStatus}"
+              title="Space ${s.id} — ${s.status}"
+              onclick="clickSpace('${s.id}')"
+            >
+              ${s.id}
+            </div>
+          `;
+        })
         .join("");
-      return `<div class="map-section"><h4>Section ${sec}</h4><div class="space-grid">${cells}</div></div>`;
+
+      return `
+        <div class="map-section">
+          <h4>Section ${sec}</h4>
+          <div class="space-grid">${cells}</div>
+        </div>
+      `;
     })
     .join("");
 }
@@ -347,34 +545,106 @@ function renderMap() {
 function clickSpace(id) {
   const sp = findSpace(id);
   if (!sp) return;
+
   if (sp.status === "available") {
-    if (confirm(`Space ${id} is available. Open Manual Entry to assign it?`)) {
+    if (
+      confirm(
+        `Space ${id} is available. Open Manual Entry to assign it?`
+      )
+    ) {
       openManualEntry();
-      setTimeout(() => (document.getElementById("meSpace").value = id), 0);
+      setTimeout(() => {
+        document.getElementById("meSpace").value = id;
+      }, 0);
     }
   } else {
-    const linkedRes = reservations.find((r) => r.space === id && (r.status === "confirmed" || r.status === "awaiting"));
-    if (linkedRes && confirm(`Space ${id} is ${sp.status}, reserved by ${linkedRes.user}. Release it now?`)) {
+    const linkedRes = reservations.find(
+      (r) =>
+        r.space === id &&
+        (r.status === "confirmed" || r.status === "awaiting")
+    );
+
+    if (
+      linkedRes &&
+      confirm(
+        `Space ${id} is ${sp.status}, reserved by ${linkedRes.user}. Release it now?`
+      )
+    ) {
       releaseReservation(linkedRes.id);
-    } else if (!linkedRes && confirm(`Space ${id} is marked ${sp.status} with no linked reservation. Mark it available?`)) {
-      sp.status = "available";
-      addHistory(`Space ${id} manually marked available.`);
-      renderAll();
+    } else if (
+      !linkedRes &&
+      confirm(
+        `Space ${id} is marked ${sp.status} with no linked reservation. Mark it available?`
+      )
+    ) {
+      toast(
+        "This space must be updated through the backend to save the change."
+      );
     }
   }
 }
 
-/* ===================== USERS ===================== */
+/*  USERS  */
+
+async function loadUsersFromBackend() {
+  const token =
+    localStorage.getItem("parkease_token") ||
+    sessionStorage.getItem("parkease_token");
+
+  if (!token) {
+    toast("Please log in again.");
+    return;
+  }
+
+  try {
+    const response = await fetch("http://localhost:5001/api/admin/users", {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || "Unable to load users.");
+    }
+
+    const data = await response.json();
+
+    users = data.map((user) => ({
+      id: user.id,
+      name: `${user.firstName} ${user.lastName}`,
+      role: user.role === "admin" ? "Admin" : "Driver",
+      vehicle: user.vehicle || "—",
+      flags: 0
+    }));
+
+    renderUsersTable();
+  } catch (error) {
+    console.error("Failed to load users:", error);
+    toast(error.message || "Failed to load users.");
+  }
+}
 
 function renderUsersTable() {
   const search = document.getElementById("userSearch").value.trim().toLowerCase();
   let rows = users.slice();
-  if (search) rows = rows.filter((u) => u.name.toLowerCase().includes(search));
+
+  if (search) {
+    rows = rows.filter((u) => u.name.toLowerCase().includes(search));
+  }
+
   const body = document.getElementById("usersTableBody");
+
   body.innerHTML = rows.length
     ? rows
         .map((u) => {
-          const initials = u.name.split(" ").map((p) => p[0]).slice(0, 2).join("").toUpperCase();
+          const initials = u.name
+            .split(" ")
+            .map((p) => p[0])
+            .slice(0, 2)
+            .join("")
+            .toUpperCase();
+
           return `<tr>
             <td><div class="userrow"><div class="avatar">${initials}</div> ${u.name}</div></td>
             <td>${u.role}</td>
@@ -386,35 +656,34 @@ function renderUsersTable() {
         .join("")
     : `<tr><td colspan="5" class="empty">No users match.</td></tr>`;
 }
+
 function removeUser(id) {
   const u = users.find((x) => x.id === id);
   if (!u) return;
+
   if (!confirm(`Remove ${u.name}?`)) return;
+
+  // This only removes the user from the dashboard display.
+  // It does not delete the account from the database.
   users = users.filter((x) => x.id !== id);
+
   addHistory(`User ${u.name} removed by Admin User.`);
   renderAll();
 }
+
 function openUserModal() {
   document.getElementById("uName").value = "";
   document.getElementById("uVehicle").value = "";
   openModal("userModal");
 }
-function submitUser() {
-  const name = document.getElementById("uName").value.trim();
-  const role = document.getElementById("uRole").value;
-  const vehicle = document.getElementById("uVehicle").value.trim() || "—";
-  if (!name) {
-    toast("Enter a name.");
-    return;
-  }
-  users.push({ id: idCounter++, name, role, vehicle, flags: 0 });
-  addHistory(`New ${role.toLowerCase()} added: ${name}.`);
-  toast(`${name} added.`);
-  closeModal("userModal");
-  renderAll();
-}
 
-/* ===================== HISTORY ===================== */
+function submitUser() {
+  toast("Adding users through the dashboard is not connected yet.");
+}
+loadUsersFromBackend();
+
+
+/*  HISTORY  */
 
 function renderHistoryTable() {
   const body = document.getElementById("historyTableBody");
@@ -423,7 +692,7 @@ function renderHistoryTable() {
     : `<tr><td colspan="2" class="empty">No history yet.</td></tr>`;
 }
 
-/* ===================== CSV EXPORT ===================== */
+/* CSV EXPORT  */
 
 function exportCSV() {
   const rows = [["User", "Space", "Reserved At", "Status"]];
@@ -439,7 +708,7 @@ function exportCSV() {
   toast("CSV exported.");
 }
 
-/* ===================== MODAL HELPERS ===================== */
+/*  MODAL HELPERS  */
 
 function openModal(id) {
   document.getElementById(id).classList.add("show");
@@ -453,7 +722,7 @@ document.querySelectorAll(".modal-overlay").forEach((ov) => {
   });
 });
 
-/* ===================== RENDER ALL ===================== */
+/*  RENDER ALL  */
 
 function renderAll() {
   renderStats();
@@ -466,3 +735,6 @@ function renderAll() {
   renderHistoryTable();
 }
 renderAll();
+loadUsersFromBackend();
+loadReservationsFromBackend();
+loadParkingSpaces();

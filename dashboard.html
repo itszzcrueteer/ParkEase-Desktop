@@ -333,12 +333,13 @@
     <div class="field"><label>Space</label><input id="mgSpace" disabled></div>
     <div class="field"><label>Status</label>
       <select id="mgStatus">
-        <option value="confirmed">Confirmed</option>
-        <option value="awaiting">Awaiting Arrival</option>
-        <option value="expired">Expired</option>
-        <option value="cancelled">Cancelled</option>
-      </select>
+  <option value="confirmed">Confirmed</option>
+  <option value="arrived">Arrived</option>
+  <option value="rejected">Rejected</option>
+</select>
     </div>
+    
+    
     <div class="modal-actions">
       <button class="cancel" onclick="closeModal('manageModal')">Cancel</button>
       <button class="confirm" onclick="saveManage()">Save</button>

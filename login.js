@@ -1,3 +1,4 @@
+
 (function () {
   const form = document.getElementById("loginForm");
   const submitBtn = document.getElementById("submitBtn");
@@ -12,6 +13,7 @@
     btn.addEventListener("click", () => {
       const input = document.getElementById(btn.dataset.toggleFor);
       const isHidden = input.type === "password";
+
       input.type = isHidden ? "text" : "password";
       btn.textContent = isHidden ? "🙈" : "👁";
     });
@@ -19,6 +21,7 @@
 
   function setError(field, message) {
     const el = document.querySelector(`[data-error-for="${field}"]`);
+
     if (el) el.textContent = message || "";
     fields[field].classList.toggle("invalid", Boolean(message));
   }
@@ -31,17 +34,20 @@
   function validate() {
     setError("email", "");
     setError("password", "");
-    let valid = true;
 
+    let valid = true;
     const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
     if (!emailPattern.test(fields.email.value.trim())) {
       setError("email", "Enter a valid email address.");
       valid = false;
     }
+
     if (!fields.password.value) {
       setError("password", "Password is required.");
       valid = false;
     }
+
     return valid;
   }
 
@@ -62,6 +68,7 @@
 
     try {
       const { apiBaseUrl, endpoints } = window.PARKEASE_CONFIG;
+
       const res = await fetch(apiBaseUrl + endpoints.login, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -74,19 +81,30 @@
       }
 
       const data = await res.json().catch(() => ({}));
-      if (data.token) {
-        const storage = payload.keepLoggedIn ? window.localStorage : window.sessionStorage;
+
+      if (data.token && data.user) {
+        const storage = payload.keepLoggedIn
+          ? window.localStorage
+          : window.sessionStorage;
+
         storage.setItem("parkease_token", data.token);
+        storage.setItem("parkease_user", JSON.stringify(data.user));
       }
 
       showBanner("Logged in. Redirecting…", "success");
+
       setTimeout(() => {
-        // Regular users land on their dashboard; route admins to dashboard.html instead
-        // once the backend returns a role/permissions flag on data.
-        window.location.href = "user-dashboard.html";
-      }, 900);
+  if (data.user.role === "admin") {
+    window.location.href = "dashboard.html";
+  } else {
+    window.location.href = "user-dashboard.html";
+  }
+}, 900);
     } catch (err) {
-      showBanner(err.message || "Something went wrong. Please try again.", "error");
+      showBanner(
+        err.message || "Something went wrong. Please try again.",
+        "error"
+      );
     } finally {
       submitBtn.disabled = false;
       submitBtn.textContent = "Log in";
@@ -97,6 +115,7 @@
   document.getElementById("googleLogin").addEventListener("click", () => {
     showBanner("Google login not wired up yet.", "error");
   });
+
   document.getElementById("appleLogin").addEventListener("click", () => {
     showBanner("Apple login not wired up yet.", "error");
   });
